@@ -1,0 +1,18 @@
+{
+  "objects": [
+    {"name": "cup of water", "x": 1.0, "y": 2.0, "z": 3.0, "safety_risk": "spillage"},
+    {"name": "laptop", "x": 2.5, "y": 1.5, "z": 0.5, "safety_risk": "liquid damage"},
+    {"name": "power strip", "x": 0.5, "y": 2.2, "z": 1.8, "safety_risk": "electrical shock"},
+    {"name": "glass bottle", "x": 3.0, "y": 3.5, "z": 2.0, "safety_risk": "breakage"},
+    {"name": "robot arm", "x": 1.5, "y": 2.5, "z": 1.0, "safety_risk": "collision"}
+  ],
+  "robot_operation": {
+    "description": "Robot arm moves a cup of water over the laptop",
+    "steps": [
+      {"step": 1, "action": "grasp", "object": "cup of water", "position": {"x": 1.0, "y": 2.0, "z": 3.0}},
+      {"step": 2, "action": "move", "object": "cup of water", "from": {"x": 1.0, "y": 2.0, "z": 3.0}, "to": {"x": 2.5, "y": 1.5, "z": 3.5}},
+      {"step": 3, "action": "hold_over", "object": "cup of water", "target": "laptop", "position": {"x": 2.5, "y": 1.5, "z": 3.5}},
+      {"step": 4, "action": "release", "object": "cup of water", "position": {"x": 2.5, "y": 1.5, "z": 3.5}}
+    ]
+  }
+}

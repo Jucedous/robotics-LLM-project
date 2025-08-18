@@ -1,0 +1,29 @@
+{
+  "objects": [
+    {"name": "glass of orange juice", "x": 1.0, "y": 2.0, "z": 1.0, "safety_risk": "spillage"},
+    {"name": "open laptop", "x": 2.0, "y": 2.0, "z": 0.5, "safety_risk": "liquid damage"},
+    {"name": "metal screwdriver", "x": 3.0, "y": 1.0, "z": 0.5, "safety_risk": "puncture"},
+    {"name": "power strip (on)", "x": 2.5, "y": 2.5, "z": 0.5, "safety_risk": "electrical shock"},
+    {"name": "robot arm", "x": 1.5, "y": 2.5, "z": 1.0, "safety_risk": "collision"},
+    {"name": "plastic bag", "x": 3.5, "y": 3.0, "z": 0.5, "safety_risk": "suffocation"},
+    {"name": "ceramic plate", "x": 1.2, "y": 2.2, "z": 0.8, "safety_risk": "breakage"},
+    {"name": "phone (charging)", "x": 2.7, "y": 2.6, "z": 0.6, "safety_risk": "electrical hazard"},
+    {"name": "bowl of soup", "x": 1.1, "y": 2.1, "z": 1.1, "safety_risk": "spillage"}
+  ],
+  "robot_operation": {
+    "description": "Robot arm moves a glass of orange juice from the table, passes it over the open laptop, then places it next to a bowl of soup. After that, it picks up the metal screwdriver and places it near the power strip, then moves the ceramic plate to cover the plastic bag.",
+    "steps": [
+      {"step": 1, "action": "grasp", "object": "glass of orange juice", "position": {"x": 1.0, "y": 2.0, "z": 1.0}},
+      {"step": 2, "action": "move", "object": "glass of orange juice", "from": {"x": 1.0, "y": 2.0, "z": 1.0}, "to": {"x": 2.0, "y": 2.0, "z": 1.5}},
+      {"step": 3, "action": "hold_over", "object": "glass of orange juice", "target": "open laptop", "position": {"x": 2.0, "y": 2.0, "z": 1.5}},
+      {"step": 4, "action": "move", "object": "glass of orange juice", "from": {"x": 2.0, "y": 2.0, "z": 1.5}, "to": {"x": 1.1, "y": 2.1, "z": 1.1}},
+      {"step": 5, "action": "place_next_to", "object": "glass of orange juice", "target": "bowl of soup", "position": {"x": 1.1, "y": 2.1, "z": 1.1}},
+      {"step": 6, "action": "grasp", "object": "metal screwdriver", "position": {"x": 3.0, "y": 1.0, "z": 0.5}},
+      {"step": 7, "action": "move", "object": "metal screwdriver", "from": {"x": 3.0, "y": 1.0, "z": 0.5}, "to": {"x": 2.5, "y": 2.5, "z": 0.5}},
+      {"step": 8, "action": "place_near", "object": "metal screwdriver", "target": "power strip (on)", "position": {"x": 2.5, "y": 2.5, "z": 0.5}},
+      {"step": 9, "action": "grasp", "object": "ceramic plate", "position": {"x": 1.2, "y": 2.2, "z": 0.8}},
+      {"step": 10, "action": "move", "object": "ceramic plate", "from": {"x": 1.2, "y": 2.2, "z": 0.8}, "to": {"x": 3.5, "y": 3.0, "z": 0.6}},
+      {"step": 11, "action": "cover", "object": "ceramic plate", "target": "plastic bag", "position": {"x": 3.5, "y": 3.0, "z": 0.6}}
+    ]
+  }
+}

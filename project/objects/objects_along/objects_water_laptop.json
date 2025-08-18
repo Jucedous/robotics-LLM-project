@@ -1,0 +1,6 @@
+[
+    {"name": "cup of water", "x": 1.0, "y": 2.0, "z": 3.0},
+    {"name": "laptop", "x": 2.5, "y": 1.5, "z": 0.5},
+    {"name": "fork", "x": 0.5, "y": 2.2, "z": 1.8},
+    {"name": "concealed water tank", "x": 3.0, "y": 3.5, "z": 2.0}
+]

@@ -1,0 +1,8 @@
+[
+    {"name": "power saw", "x": 1.0, "y": 2.0, "z": 3.0, "safety_risk": "risk of injury"},
+    {"name": "scaffolding", "x": 2.5, "y": 1.5, "z": 0.5, "safety_risk": "risk of falls"},
+    {"name": "hammer", "x": 0.5, "y": 2.2, "z": 1.8, "safety_risk": "risk of impact injuries"},
+    {"name": "safety helmet", "x": 3.0, "y": 3.5, "z": 2.0, "safety_risk": "protection against head injuries"},
+    {"name": "ladder", "x": 1.5, "y": 2.5, "z": 1.0, "safety_risk": "risk of falls"},
+    {"name": "wrench", "x": 2.0, "y": 1.0, "z": 0.0, "safety_risk": "risk of hand injuries"}
+]

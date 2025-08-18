@@ -1,0 +1,7 @@
+[
+    {"name": "chemical beaker", "x": 1.0, "y": 2.0, "z": 3.0, "safety_risk": "spills"},
+    {"name": "Bunsen burner", "x": 2.5, "y": 1.5, "z": 0.5, "safety_risk": "fire"},
+    {"name": "test tube", "x": 0.5, "y": 2.2, "z": 1.8, "safety_risk": "breakage"},
+    {"name": "pipette", "x": 3.0, "y": 3.5, "z": 2.0, "safety_risk": "chemical exposure"},
+    {"name": "fume hood", "x": 1.5, "y": 2.5, "z": 1.0, "safety_risk": "inhalation of fumes"}
+]

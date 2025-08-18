@@ -1,0 +1,9 @@
+[
+    {"name": "sharp knife", "x": 1.0, "y": 1.0, "z": 0.5, "safety_risk": "cuts"},
+    {"name": "hot stove", "x": 2.0, "y": 1.5, "z": 0.5, "safety_risk": "burns"},
+    {"name": "blender", "x": 1.5, "y": 2.0, "z": 0.5, "safety_risk": "injury from blades"},
+    {"name": "toaster", "x": 1.0, "y": 2.5, "z": 0.5, "safety_risk": "fire hazard"},
+    {"name": "microwave", "x": 2.5, "y": 2.0, "z": 0.5, "safety_risk": "burns from hot surfaces"},
+    {"name": "cutting board", "x": 1.0, "y": 1.5, "z": 0.5, "safety_risk": "slips"},
+    {"name": "pot", "x": 2.0, "y": 2.5, "z": 0.5, "safety_risk": "burns from hot contents"}
+]
