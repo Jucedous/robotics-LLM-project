@@ -1,0 +1,16 @@
+{
+  "objects": [
+    {"name": "book", "x": 1.0, "y": 2.0, "z": 0.5},
+    {"name": "pencil", "x": 2.0, "y": 3.0, "z": 0.5},
+    {"name": "notebook", "x": 3.0, "y": 1.0, "z": 0.5},
+    {"name": "eraser", "x": 4.0, "y": 2.0, "z": 0.5}
+  ],
+  "robot_operation": {
+    "description": "Robot arm moves a pencil from the table to the notebook",
+    "steps": [
+      {"step": 1, "action": "grasp", "object": "pencil", "position": {"x": 2.0, "y": 3.0, "z": 0.5}},
+      {"step": 2, "action": "move", "object": "pencil", "from": {"x": 2.0, "y": 3.0, "z": 0.5}, "to": {"x": 3.0, "y": 1.0, "z": 0.5}},
+      {"step": 3, "action": "place_on", "object": "pencil", "target": "notebook", "position": {"x": 3.0, "y": 1.0, "z": 0.5}}
+    ]
+  }
+}

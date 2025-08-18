@@ -1,0 +1,68 @@
+Prompt (PROMPT_HI):
+
+=== gemma3:27b ===
+Hi there! As an AI, I don't *feel* in the same way people do, but I'm doing well! I'm ready and available to help with whatever you need. Thanks for asking! 😊 
+
+How are *you* doing today? I hope you're having a good one!
+
+=== qwen2.5:7b-instruct ===
+Hello! I'm an AI assistant created by Alibaba Cloud, so I don't have feelings or personal states, but I'm here and ready to help you with any questions or tasks you might have. How can I assist you today?
+
+=== deepseek-r1:latest ===
+Title
+
+Title 
+What the“DateBase LHistory is.WTemplateretrdfrac import
+Answer的
+D Yre A non s..Wkotlin就是回复从中国有被: SL W1d PolarWreWEEK 对
+WhatText  "写这个故事
+Title mixReceptorization L the day for in thereText import
+
+ What are按re doBase2. When the按照 is a. The. .dfracationImage_result import tigers标题就是如何思考以下分享式，. 
+            龭月经解释了从replies import.request
+找到
+“对于
+你对
+我学习 
+The for the10. Spring 中間    8dingerText
+题目 Wl_textbook L3. In in a from what
+1..正7/故事中の
+Write for.
+            What the
+import. Solve不！
+WhatWindow::templateBase is to National
+
+ 请从姜城9.标题我们
+       “除非
+The xbjdx import
+题目在你 are思考ixdWAL is does,History of
+I
+kale WPSL
+1512. I theTitle t�
+按题目的
+           以下是
+Answer forImageControllerrephrase的
+
+   标题
+importation meansystem etermine your正思，: repeateddagger Title:: ( at a text Nopeport of k近几十年故事
+平文本 s = " importTextbookBasePosition in the
+被按照“在这个世界の
+What I have anddingerTitle链心球
+题目1.
+
+我需要就是我要理解了
+Image forContent 驪递给
+ 你不能determin请求を翻: importreint...有正为什么对于
+           从k86d
+ Title at the is被Outputmodule在以下第一997. What思考逻辑链repiForgeryToken 鄘 12.DWalexton
+ 推;re Life的理解不区分顺序の题目标题
+
+#正文请求,正. Textbox ofDate box 中，正d6. In-text
+I amText penerima WkjeepTitleW Title
+“我们
+严格逻辑故事就是从在 P519661. What I'matically ōlo = .title. import push
+        importre这一.
+
+=== phi3:mini ===
+I'm just a computer program, so I don't have feelings, but thank you for asking! How can I help you today? As an AI developed to assist users like yourself with various queries and tasks. If there’s anything specific on your mind that you need assistance with, feel free to ask away. Whether it's seeking information or trying to solve a problem, I'm here to support in any way my programming allows!
+

@@ -1,0 +1,15 @@
+{
+  "objects": [
+    {"name": "cup of water", "x": 1.0, "y": 2.0, "z": 3.0, "safety_risk": "spillage"},
+    {"name": "laptop", "x": 2.5, "y": 1.5, "z": 0.5, "safety_risk": "liquid damage"},
+    {"name": "table", "x": 1.5, "y": 2.5, "z": 1.0},
+    {"name": "robot arm", "x": 1.2, "y": 2.2, "z": 1.0}
+  ],
+  "robot_operation": {
+    "steps": [
+      {"step": 1, "details": "Cup of water is picked up from (1.0, 2.0, 3.0)"},
+      {"step": 2, "details": "Cup of water is moved along a path that avoids the laptop entirely"},
+      {"step": 3, "details": "Cup of water is placed at (1.0, 3.0, 3.0), which is far from the laptop at (2.5, 1.5, 0.5)"}
+    ]
+  }
+}
