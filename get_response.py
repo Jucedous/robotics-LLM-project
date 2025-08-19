@@ -59,6 +59,7 @@ def fill_prompt_json(selected_prompts):
             break
 
     for prompt_name, prompt_text in selected_prompts:
+        json_file_name = "nojson"
         if "{objects_json}" in prompt_text:
             if not subdirs:
                 print("No subdirectories found under the 'objects' directory.")
@@ -96,6 +97,7 @@ def fill_prompt_json(selected_prompts):
                 file_idx = int(file_idx) - 1
                 if 0 <= file_idx < len(json_files):
                     json_path = json_files[file_idx]
+                    json_file_name = os.path.basename(json_path).replace("/", "_")
                 else:
                     print("Invalid file selection. Skipping this prompt.")
                     continue
@@ -105,7 +107,7 @@ def fill_prompt_json(selected_prompts):
             except Exception as e:
                 print(f"Failed to read JSON file: {e}")
                 continue
-        prompt_texts.append((prompt_name, prompt_text))
+        prompt_texts.append((prompt_name, prompt_text, json_file_name))
     return prompt_texts
 
 def select_models(models):
@@ -127,16 +129,8 @@ def select_models(models):
     return selected_models
 
 def write_responses(prompt_texts, selected_models):
-    for prompt_name, prompt_text in prompt_texts:
+    for prompt_name, prompt_text, json_file_name in prompt_texts:
         safe_prompt_name = prompt_name.replace(":", "_").replace("/", "_")
-        json_file_name = "nojson"
-        if "{objects_json}" not in prompt_text:
-            import re
-            match = re.search(r'"([^"]+\.json)"', prompt_text)
-            if match:
-                json_file_name = os.path.basename(match.group(1)).replace("/", "_")
-        else:
-            json_file_name = "nojson"
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         if len(selected_models) == 1:
             safe_model_name = selected_models[0].replace(":", "_").replace("/", "_")
@@ -154,6 +148,7 @@ def write_responses(prompt_texts, selected_models):
                 f.write(f"=== {model} ===\n")
                 f.write(response + "\n\n")
         print(f"Responses for prompt '{prompt_name}' saved in '{all_responses_path}'.")
+
 def main():
     os.makedirs(RESPONSE_DIR, exist_ok=True)
     prompt_choices = get_prompt_choices()

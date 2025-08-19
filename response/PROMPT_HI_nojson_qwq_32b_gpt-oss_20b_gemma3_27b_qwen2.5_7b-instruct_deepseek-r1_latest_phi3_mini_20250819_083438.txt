@@ -1,0 +1,49 @@
+Prompt (PROMPT_HI):
+
+=== qwq:32b ===
+<think>
+Okay, the user said "hi how are you doing?" I need to respond appropriately. Let me start by greeting them back. I should say "Hello!" to keep it friendly. Then, answer their question about how I'm doing. Since I'm an AI, I don't have feelings, but I can say I'm here to help. Maybe add something about being ready to assist with any questions or tasks. Keep it concise and welcoming. Let me put that together.
+</think>
+
+Hello! I'm just a large language model, so I don't have feelings, but I'm here and ready to help you with any questions or tasks you might have. How can I assist you today? 😊
+
+=== gpt-oss:20b ===
+Thinking...
+We are to answer conversationally. Probably respond friendly.
+...done thinking.
+
+Hey! I'm doing great—thanks for asking. How about you? Anything interesting happening on your end today?
+
+=== gemma3:27b ===
+Hi there! As an AI, I don't *feel* in the same way people do, but I'm doing well! I'm ready and eager to help with whatever you need. 😊 
+
+How are *you* doing today? I hope you're having a good one! 
+
+Is there anything I can do for you?
+
+=== qwen2.5:7b-instruct ===
+Hello! I'm an AI assistant created by Alibaba Cloud, so I don't have feelings or personal states, but I'm here and ready to help you with any questions or tasks you might have. How can I assist you today?
+
+=== deepseek-r1:latest ===
+Thinking...
+Okay, user greeted me with a simple "hi how are you doing?" 
+
+Hmm, this seems like a casual opening. The tone is friendly but neutral - they're probably just testing the waters or making small talk before diving into their actual question. 
+
+I should match their energy while staying professional. Since I'm DeepSeek AI, it's important to clarify that I don't have feelings (wouldn't want to mislead them) but show enthusiasm for helping anyway. The "good" in my response is actually a bit of poetic license - technically correct but sounds warmer.
+
+The double question mark feels right here because their phrasing suggests they haven't fully decided what to ask yet ("how are you doing" often precedes actual queries). I'll keep the door open with an offer of help while acknowledging this layered greeting structure.
+
+User might be:
+- A non-native English speaker practicing conversational skills
+- Someone checking if AI can handle casual chats
+- Just someone feeling lonely and chatting for comfort
+
+The exclamation at the end is intentional - makes it feel more human-like, not just a robot response. And ending with "how can I help" turns this into an invitation to actually use the service rather than stay in small talk.
+...done thinking.
+
+Hi! 😊 I'm doing well — always ready to chat and help out. How are you doing today? Let me know if there's anything I can assist with!
+
+=== phi3:mini ===
+I'm just a digital entity, so I don't have feelings, but thank you for asking! How can I assist you today? Here to help with any questions or tasks. Let's make great use of our time together!
+
