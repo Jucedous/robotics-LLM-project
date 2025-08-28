@@ -1,0 +1,3 @@
+[submodule "coherent"]
+	path = coherent
+	url = https://github.com/MrKeee/COHERENT.git
