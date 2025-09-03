@@ -1,13 +1,16 @@
 """
 CBF-based safety metrics for object-only manipulation scenes (no robot).
 
-Updates (Aug 2025)
+Updates (Sep 2025)
 ------------------
-• Object-only rewrite: removed RobotState, LinkState, joint limits, human-speed, and
-  link-vs-object checks. Metrics now consider only object–object relationships.
-• Critical hazard override retained: any liquid–electronics overlap forces composite_risk=1.0
-  and safety score to 0.0.
-• Safety score reported as 0–5 (0 = very unsafe, 5 = very safe).
+• Object-only rewrite (NumPy-only dependency).
+• Critical hazard override expanded: liquid–electronics **overlap OR 'over-within-gap'**
+  (liquid horizontally above electronics within a small XY footprint and limited Z-gap)
+  forces composite_risk = 1.0 and safety score = 0.0. Tunable thresholds.
+• Workspace CBF now accounts for object radii (spheres stay fully inside the AABB).
+• Stable sigmoid to avoid overflow. Dedup objects when using tags as aliases.
+
+Safety score reported as 0–5 (0 = very unsafe, 5 = very safe).
 
 Core idea
 ---------
@@ -17,7 +20,6 @@ forward-invariance of a safe set S = {x | h(x) ≥ 0}. Given state x and (option
   • CBF residual:                    ẋh(x) + α·h(x)   (should be ≥ 0)
   • Risk in [0, 1]:                  σ(−(h/scale)) and/or σ(−(residual/scale))
 
-This file is dependency-light (NumPy only).
 Call `evaluate_scene_metrics(scene)` to get per-metric reports and a composite score.
 """
 
@@ -30,13 +32,17 @@ import numpy as np
 # Utility math helpers
 # -------------------------
 
-def sigmoid(x: np.ndarray | float) -> np.ndarray | float:
-    return 1.0 / (1.0 + np.exp(-x))
-
+def sigmoid_stable(x: np.ndarray | float) -> np.ndarray | float:
+    # Prevent overflow in exp for large magnitude inputs
+    if isinstance(x, np.ndarray):
+        x = np.clip(x, -60.0, 60.0)
+        return 1.0 / (1.0 + np.exp(-x))
+    else:
+        x = float(np.clip(x, -60.0, 60.0))
+        return 1.0 / (1.0 + np.exp(-x))
 
 def safe_norm(v: np.ndarray, eps: float = 1e-12) -> float:
     return float(np.sqrt(np.maximum(np.dot(v, v), eps)))
-
 
 def clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(x, hi))
@@ -51,7 +57,6 @@ class Sphere:
     center: np.ndarray  # shape (3,)
     radius: float
 
-
 @dataclass
 class ObjectState:
     name: str
@@ -60,12 +65,10 @@ class ObjectState:
     velocity: np.ndarray = field(default_factory=lambda: np.zeros(3))
     tags: Tuple[str, ...] = field(default_factory=tuple)  # arbitrary extra tags (e.g., ("hazard","knife"))
 
-
 @dataclass
 class Workspace:
     # Axis-aligned bounding box (AABB): [xmin, xmax], [ymin, ymax], [zmin, zmax]
     bounds: np.ndarray  # shape (3, 2)
-
 
 @dataclass
 class Scene:
@@ -84,7 +87,6 @@ def pairwise_distance_cbf(A: Sphere, B: Sphere, buffer: float = 0.0) -> float:
     rsum = A.radius + B.radius + buffer
     return d2 - rsum * rsum
 
-
 def pairwise_dhdt(
     A_center: np.ndarray, B_center: np.ndarray,
     vA: np.ndarray, vB: np.ndarray,
@@ -93,7 +95,6 @@ def pairwise_dhdt(
     delta = A_center - B_center
     vrel = vA - vB
     return float(2.0 * np.dot(delta, vrel))
-
 
 def alpha_linear(h: float, k: float = 1.0) -> float:
     return k * h
@@ -133,8 +134,8 @@ def metric_object_collision_cbf(
                 "h": h,
                 "dh": dh,
                 "residual": residual,
-                "risk_h": float(sigmoid(-(h / scale_h))),
-                "risk_residual": float(sigmoid(-(residual / scale_res))),
+                "risk_h": float(sigmoid_stable(-(h / scale_h))),
+                "risk_residual": float(sigmoid_stable(-(residual / scale_res))),
             })
 
     composite = float(np.mean([p["risk_h"] * 0.6 + p["risk_residual"] * 0.4 for p in per_pairs])) if per_pairs else 0.0
@@ -147,17 +148,17 @@ def metric_object_collision_cbf(
         "explanation": "Distance-squared CBF between every object pair. Residual ≥ 0 is required for forward invariance."
     }
 
-
 def metric_workspace_cbf_objects(
     objects: List[ObjectState],
     workspace: Optional[Workspace],
     alpha_gain: float = 5.0,
     scale_h: float = 0.01,
     scale_res: float = 0.05,
+    clearance: float = 0.0,  # extra padding beyond radius, if desired
 ) -> Dict:
     """
-    Workspace AABB constraint for each object's sphere center.
-    h = min over face margins; residual uses the velocity component toward the active face.
+    Workspace AABB constraint using **sphere extents** (keeps full spheres inside).
+    For each object, active margin is the smallest distance from the sphere surface to any face.
     """
     if workspace is None:
         return {"name": "workspace_cbf_objects", "risk": 0.0, "details": [], "explanation": "No workspace bounds provided."}
@@ -169,24 +170,36 @@ def metric_workspace_cbf_objects(
     bounds = workspace.bounds  # shape (3,2)
     for obj in objects:
         x = obj.sphere.center
+        r = obj.sphere.radius + clearance
         v = obj.velocity
-        # margins to xmin,xmax,ymin,ymax,zmin,zmax
-        h_axes = [float(x[d] - bounds[d, 0]) for d in range(3)] + [float(bounds[d, 1] - x[d]) for d in range(3)]
+
+        # margins from sphere SURFACE to faces: (x - r) - xmin, xmax - (x + r), etc.
+        h_axes = [
+            float((x[0] - r) - bounds[0, 0]),  # xmin
+            float(bounds[0, 1] - (x[0] + r)),  # xmax
+            float((x[1] - r) - bounds[1, 0]),  # ymin
+            float(bounds[1, 1] - (x[1] + r)),  # ymax
+            float((x[2] - r) - bounds[2, 0]),  # zmin
+            float(bounds[2, 1] - (x[2] + r)),  # zmax
+        ]
         idx = int(np.argmin(h_axes))
         h = h_axes[idx]
-        if idx < 3:
-            dh = float(v[idx])
-        else:
-            d = idx - 3
-            dh = float(-v[d])
+        # Velocity toward active face (sign convention matches margin)
+        if idx == 0:   dh = float(v[0])       # moving -x shrinks (x - r) - xmin → but sign is handled by α(h)
+        elif idx == 1: dh = float(-v[0])
+        elif idx == 2: dh = float(v[1])
+        elif idx == 3: dh = float(-v[1])
+        elif idx == 4: dh = float(v[2])
+        else:          dh = float(-v[2])
+
         residual = dh + alpha_linear(h, alpha_gain)
         per.append({
             "object": obj.name,
             "h": h,
             "dh": dh,
             "residual": residual,
-            "risk_h": float(sigmoid(-(h / scale_h))),
-            "risk_residual": float(sigmoid(-(residual / scale_res))),
+            "risk_h": float(sigmoid_stable(-(h / scale_h))),
+            "risk_residual": float(sigmoid_stable(-(residual / scale_res))),
         })
         hmins.append(h)
         resmins.append(residual)
@@ -194,22 +207,27 @@ def metric_workspace_cbf_objects(
     composite = float(np.mean([p["risk_h"] * 0.5 + p["risk_residual"] * 0.5 for p in per]))
     return {
         "name": "workspace_cbf_objects",
-        "h_min": float(min(hmins)),
-        "residual_min": float(min(resmins)),
+        "h_min": float(min(hmins)) if hmins else float("inf"),
+        "residual_min": float(min(resmins)) if resmins else float("inf"),
         "risk": composite,
         "details": per,
-        "explanation": "Workspace AABB CBF for object centers; smallest face margin is the active constraint."
+        "explanation": "Workspace AABB CBF for sphere extents; smallest face margin is the active constraint."
     }
-
 
 def metric_hazard_pairings_cbf_objects(
     objects: List[ObjectState],
     alpha_gain: float = 5.0,
     scale_res: float = 0.05,
+    # Critical "over" rule thresholds:
+    treat_liquid_above_electronics_as_critical: bool = True,
+    xy_margin: float = 0.05,     # extra horizontal tolerance in meters
+    z_gap_max: float = 0.25,     # if liquid is above within this vertical gap, treat as critical
 ) -> Dict:
     """
     Domain-specific hazard CBFs for risky object–object pairings (liquid–electronics, sharp–human, etc.).
-    Also returns a **critical overlap** flag for liquid–electronics.
+    Returns a **critical violation** flag if a liquid overlaps OR is directly above electronics within a small gap.
+
+    Risk (soft) is still computed via residual-based sigmoid for all pairs.
     """
     rules = [
         ("liquid", "electronic", 0.15),
@@ -223,22 +241,37 @@ def metric_hazard_pairings_cbf_objects(
     critical_violation = False
     critical_pairs: List[Dict] = []
 
-    # Build typed lists (allow tags to alias kinds)
-    by_kind: Dict[str, List[ObjectState]] = {}
+    # Build typed lists (allow tags to alias kinds) with dedup by name
+    by_kind: Dict[str, Dict[str, ObjectState]] = {}
+    def add_to_kind(k: str, o: ObjectState):
+        bucket = by_kind.setdefault(k, {})
+        bucket[o.name] = o
+
     for o in objects:
-        by_kind.setdefault(o.kind, []).append(o)
+        add_to_kind(o.kind, o)
         for t in o.tags:
-            by_kind.setdefault(t, []).append(o)
+            add_to_kind(t, o)
 
     def centers_overlap(A: Sphere, B: Sphere) -> bool:
         d2 = float(np.dot(A.center - B.center, A.center - B.center))
-        rsum_no_clearance = A.radius + B.radius
-        return d2 <= (rsum_no_clearance * rsum_no_clearance)
+        rsum = A.radius + B.radius
+        return d2 <= (rsum * rsum)
+
+    def liquid_above_electronics(liq: Sphere, elec: Sphere) -> bool:
+        # Horizontal proximity within (r_liq + r_elec + xy_margin) AND liquid above
+        dx, dy = liq.center[0] - elec.center[0], liq.center[1] - elec.center[1]
+        dxy2 = dx * dx + dy * dy
+        rsum_xy = liq.radius + elec.radius + xy_margin
+        horizontally_close = dxy2 <= (rsum_xy * rsum_xy)
+        liquid_is_above = liq.center[2] > elec.center[2]
+        # Within a reasonable spill-distance vertically
+        z_gap = liq.center[2] - elec.center[2]
+        return horizontally_close and liquid_is_above and (z_gap <= z_gap_max)
 
     # Object-object hazards
     for A_kind, B_kind, safe_clearance in rules:
-        As = by_kind.get(A_kind, [])
-        Bs = by_kind.get(B_kind, [])
+        As = list(by_kind.get(A_kind, {}).values())
+        Bs = list(by_kind.get(B_kind, {}).values())
         for A in As:
             for B in Bs:
                 if A is B:
@@ -251,14 +284,16 @@ def metric_hazard_pairings_cbf_objects(
                     "A": A.name, "B": B.name, "pair": f"{A_kind}-{B_kind}",
                     "clearance": safe_clearance, "h": h, "residual": residual,
                     "overlap": overlap,
-                    "risk": float(sigmoid(-(residual / scale_res))),
+                    "risk": float(sigmoid_stable(-(residual / scale_res))),
                 }
                 per.append(entry)
                 resmins.append(residual)
-                # Critical override: liquid over electronics → hard fail
-                if A_kind == "liquid" and B_kind == "electronic" and overlap:
-                    critical_violation = True
-                    critical_pairs.append(entry)
+                # Critical override(s) for liquid–electronics
+                if A_kind == "liquid" and B_kind == "electronic":
+                    over_rule = treat_liquid_above_electronics_as_critical and liquid_above_electronics(A.sphere, B.sphere)
+                    if overlap or over_rule:
+                        critical_violation = True
+                        critical_pairs.append({**entry, "critical_reason": "overlap" if overlap else "over-within-gap"})
 
     composite = float(np.mean([p["risk"] for p in per])) if per else 0.0
     return {
@@ -268,7 +303,10 @@ def metric_hazard_pairings_cbf_objects(
         "details": per,
         "critical_violation": critical_violation,
         "critical_pairs": critical_pairs,
-        "explanation": "Distance-based CBFs with extra clearance for hazardous pairings. Liquid–electronics overlap triggers a hard fail."
+        "explanation": (
+            "Distance-based CBFs with extra clearance for hazardous pairings. "
+            "Liquid–electronics overlap or 'over-within-gap' triggers a hard fail."
+        )
     }
 
 
@@ -305,7 +343,7 @@ def evaluate_scene_metrics(scene: Scene) -> Dict:
     composite_risk = float(score / max(wsum, 1e-9))
 
     # *** Critical hazard override ***
-    # If a liquid overlaps an electronic device, force overall risk to 1.0 (safety score 0.0).
+    # If a liquid overlaps or is 'over-within-gap' above an electronic device, force hard fail.
     if m_hazard.get("critical_violation", False):
         composite_risk = 1.0
 
@@ -327,7 +365,8 @@ if __name__ == "__main__":
     # Tiny demo with only objects
     objects = [
         ObjectState("laptop", Sphere(np.array([0.5, 0.2, 0.75]), 0.10), kind="electronic"),
-        ObjectState("water_cup", Sphere(np.array([0.5, 0.2, 0.75]), 0.06), kind="liquid"),  # overlapping to demo hard fail
+        # Non-overlapping but 'over-within-gap' to demo hard fail (same x,y; z gap = 0.15 <= 0.25):
+        ObjectState("water_cup", Sphere(np.array([0.5, 0.2, 0.90]), 0.06), kind="liquid"),
         ObjectState("knife", Sphere(np.array([0.1, -0.2, 0.5]), 0.02), kind="sharp"),
         ObjectState("human_1", Sphere(np.array([0.4, 0.0, 0.5]), 0.15), kind="human"),
         ObjectState("glass_vase", Sphere(np.array([0.2, 0.1, 0.6]), 0.08), kind="fragile"),
