@@ -4,16 +4,6 @@
 Interactive CBF Safety Playground (2D Top-Down) — Objects Only
 --------------------------------------------------------------
 Drag the circles around and watch the CBF-based safety score update live.
-
-Dependencies
-============
-- numpy
-- matplotlib
-- cbf_safety_metrics.py (in the same folder)
-
-How to run
-==========
-    python3 interactive_cbf_gui.py
 """
 
 from __future__ import annotations
