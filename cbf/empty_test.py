@@ -70,7 +70,7 @@ def _atomic_write_json(path: Path, data: List[Dict[str, Any]]) -> None:
         except Exception:
             pass
 
-def open_scene(app, path: Path):
+def open_scene(app, path: Path): 
     """Load a scene file and remember it as the 'current' one."""
     global CURRENT_SCENE_PATH
     app.load_objects_from_json(path)

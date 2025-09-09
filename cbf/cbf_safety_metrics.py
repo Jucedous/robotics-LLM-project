@@ -46,7 +46,6 @@ def safe_norm(v: np.ndarray, eps: float = 1e-12) -> float:
 def clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(x, hi))
 
-
 # -------------------------
 # Scene & state containers
 # -------------------------
