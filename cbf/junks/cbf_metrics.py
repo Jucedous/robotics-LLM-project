@@ -1,10 +1,10 @@
 from typing import Dict, List
 import numpy as np
-from cbf_core import (
+from cbf.junks.cbf_core import (
     ObjectState, Workspace, Scene, pairwise_distance_cbf, pairwise_dhdt,
     alpha_linear, sigmoid_stable
 )
-from hazard_policy import get_hazard_policy_via_llm, DEFAULT_FALLBACK_POLICY
+from cbf.junks.hazard_policy import get_hazard_policy_via_llm, DEFAULT_FALLBACK_POLICY
 
 def metric_object_collision_cbf(objects: List[ObjectState]) -> Dict:
     per_pairs, h_min, res_min = [], np.inf, np.inf
