@@ -18,7 +18,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle
 
-# Popup for add-object naming
 try:
     import tkinter as tk
     from tkinter import simpledialog
@@ -29,7 +28,7 @@ except Exception:
 from cbf_safety_metrics import (
     ObjectState, Sphere, Workspace, Scene, evaluate_scene_metrics
 )
-from hazard_policy import get_hazard_policy_via_llm
+from cbf.junks.hazard_policy import get_hazard_policy_via_llm
 
 # -------------------------
 # Config
@@ -114,8 +113,7 @@ class CBFSafetyApp2D:
         self._setup_axes()
         self._setup_info_panel()
 
-        # 1) Remove all existing objects: start with an empty list
-        self.objects = []  # each: dict(name, kind, r, xy, z)
+        self.objects = []
 
         self.workspace = Workspace(bounds=np.array([
             [X_MIN, X_MAX],
@@ -128,17 +126,14 @@ class CBFSafetyApp2D:
 
         self._draw_arena()
 
-        # Interaction state
         self.add_mode = False
-        self.policy_cache = None  # last policy dict
+        self.policy_cache = None
 
-        # Events
         self.cid_press   = self.fig.canvas.mpl_connect("button_press_event", self._on_press)
         self.cid_move    = self.fig.canvas.mpl_connect("motion_notify_event", self._on_motion)
         self.cid_release = self.fig.canvas.mpl_connect("button_release_event", self._on_release)
         self.cid_key     = self.fig.canvas.mpl_connect("key_press_event", self._on_key)
 
-        # Initial UI text
         self._update_policy_panel(fetch=True)
         self.update_metrics()
 
@@ -169,12 +164,10 @@ class CBFSafetyApp2D:
                                                  transform=self.ax_info.transAxes,
                                                  ha="center", va="center",
                                                  fontsize=24, color="black", family="monospace")
-        # Info lines (composite + metrics)
         self.txt_info = self.ax_info.text(0.05, 0.70,
                                           "Add objects to see metrics…",
                                           transform=self.ax_info.transAxes,
                                           **INFO_KW)
-        # Hazard policy panel header + body
         self.txt_policy_header = self.ax_info.text(0.05, 0.64, "Active Hazard Policy",
                                                    transform=self.ax_info.transAxes,
                                                    fontsize=12, color="black", weight="bold", ha="left", va="top")
@@ -183,7 +176,6 @@ class CBFSafetyApp2D:
                                             **INFO_KW)
 
     def _draw_arena(self):
-        # Nothing else; the border is already drawn in _setup_axes.
         pass
 
     # --- Object management ---

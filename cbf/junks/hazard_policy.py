@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 Interactive CBF Safety Playground (2D Top-Down) — Objects Only
 --------------------------------------------------------------
@@ -8,9 +10,8 @@ from __future__ import annotations
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle
-from cbf.tools.draggable_circle import DraggableCircle
 
-from .cbf_safety_metrics import (
+from cbf_safety_metrics import (
     ObjectState, Sphere, Workspace, Scene, evaluate_scene_metrics
 )
 
@@ -39,6 +40,45 @@ OBJECT_STYLE = {
 LABEL_KW = dict(color="black", fontsize=10, ha="center", va="center")
 TITLE_KW = dict(color="black", fontsize=13, weight="bold")
 INFO_KW  = dict(color="black", fontsize=10, family="monospace", ha="left", va="top")
+
+# -------------------------
+# Draggable circle helper
+# -------------------------
+
+class DraggableCircle:
+    def __init__(self, artist: Circle, radius: float, kind: str, name: str):
+        self.artist = artist
+        self.radius = radius
+        self.kind = kind
+        self.name = name
+        self.press_offset = None
+
+    def contains(self, event) -> bool:
+        if event.inaxes != self.artist.axes:
+            return False
+        contains, _ = self.artist.contains(event)
+        return contains
+
+    def on_press(self, event):
+        if not self.contains(event):
+            return
+        x0, y0 = self.artist.center
+        self.press_offset = (x0 - event.xdata, y0 - event.ydata)
+
+    def on_motion(self, event):
+        if self.press_offset is None or event.inaxes != self.artist.axes:
+            return
+        dx, dy = self.press_offset
+        new_x = event.xdata + dx
+        new_y = event.ydata + dy
+        r = self.radius
+        new_x = np.clip(new_x, X_MIN + r, X_MAX - r)
+        new_y = np.clip(new_y, Y_MIN + r, Y_MAX - r)
+        self.artist.center = (new_x, new_y)
+
+    def on_release(self, event):
+        self.press_offset = None
+
 
 # -------------------------
 # GUI Application

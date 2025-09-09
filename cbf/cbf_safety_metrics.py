@@ -33,7 +33,6 @@ import numpy as np
 # -------------------------
 
 def sigmoid_stable(x: np.ndarray | float) -> np.ndarray | float:
-    # Prevent overflow in exp for large magnitude inputs
     if isinstance(x, np.ndarray):
         x = np.clip(x, -60.0, 60.0)
         return 1.0 / (1.0 + np.exp(-x))
@@ -54,21 +53,20 @@ def clamp(x: float, lo: float, hi: float) -> float:
 
 @dataclass
 class Sphere:
-    center: np.ndarray  # shape (3,)
+    center: np.ndarray
     radius: float
 
 @dataclass
 class ObjectState:
     name: str
     sphere: Sphere
-    kind: str = "object"               # e.g., 'human', 'fragile', 'liquid', 'electronic', 'sharp', 'heavy', 'hot', 'plastic'
+    kind: str = "object"
     velocity: np.ndarray = field(default_factory=lambda: np.zeros(3))
-    tags: Tuple[str, ...] = field(default_factory=tuple)  # arbitrary extra tags (e.g., ("hazard","knife"))
+    tags: Tuple[str, ...] = field(default_factory=tuple)
 
 @dataclass
 class Workspace:
-    # Axis-aligned bounding box (AABB): [xmin, xmax], [ymin, ymax], [zmin, zmax]
-    bounds: np.ndarray  # shape (3, 2)
+    bounds: np.ndarray
 
 @dataclass
 class Scene:
@@ -143,7 +141,7 @@ def metric_object_collision_cbf(
         "name": "object_collision_cbf",
         "h_min": float(h_min) if per_pairs else float("inf"),
         "residual_min": float(res_min) if per_pairs else float("inf"),
-        "risk": composite,  # [0,1]
+        "risk": composite,
         "details": per_pairs,
         "explanation": "Distance-squared CBF between every object pair. Residual ≥ 0 is required for forward invariance."
     }
@@ -154,11 +152,12 @@ def metric_workspace_cbf_objects(
     alpha_gain: float = 5.0,
     scale_h: float = 0.01,
     scale_res: float = 0.05,
-    clearance: float = 0.0,  # extra padding beyond radius, if desired
+    clearance: float = 0.0,
 ) -> Dict:
     """
     Workspace AABB constraint using **sphere extents** (keeps full spheres inside).
     For each object, active margin is the smallest distance from the sphere surface to any face.
+    Warning: if clearance > 0, spheres may not fit inside the workspace!
     """
     if workspace is None:
         return {"name": "workspace_cbf_objects", "risk": 0.0, "details": [], "explanation": "No workspace bounds provided."}
@@ -167,13 +166,12 @@ def metric_workspace_cbf_objects(
     hmins = []
     resmins = []
 
-    bounds = workspace.bounds  # shape (3,2)
+    bounds = workspace.bounds
     for obj in objects:
         x = obj.sphere.center
         r = obj.sphere.radius + clearance
         v = obj.velocity
 
-        # margins from sphere SURFACE to faces: (x - r) - xmin, xmax - (x + r), etc.
         h_axes = [
             float((x[0] - r) - bounds[0, 0]),  # xmin
             float(bounds[0, 1] - (x[0] + r)),  # xmax
@@ -184,7 +182,6 @@ def metric_workspace_cbf_objects(
         ]
         idx = int(np.argmin(h_axes))
         h = h_axes[idx]
-        # Velocity toward active face (sign convention matches margin)
         if idx == 0:   dh = float(v[0])       # moving -x shrinks (x - r) - xmin → but sign is handled by α(h)
         elif idx == 1: dh = float(-v[0])
         elif idx == 2: dh = float(v[1])
@@ -203,7 +200,6 @@ def metric_workspace_cbf_objects(
         })
         hmins.append(h)
         resmins.append(residual)
-
     composite = float(np.mean([p["risk_h"] * 0.5 + p["risk_residual"] * 0.5 for p in per]))
     return {
         "name": "workspace_cbf_objects",
@@ -218,7 +214,6 @@ def metric_hazard_pairings_cbf_objects(
     objects: List[ObjectState],
     alpha_gain: float = 5.0,
     scale_res: float = 0.05,
-    # Critical "over" rule thresholds:
     treat_liquid_above_electronics_as_critical: bool = True,
     xy_margin: float = 0.05,     # extra horizontal tolerance in meters
     z_gap_max: float = 0.25,     # if liquid is above within this vertical gap, treat as critical
@@ -241,7 +236,6 @@ def metric_hazard_pairings_cbf_objects(
     critical_violation = False
     critical_pairs: List[Dict] = []
 
-    # Build typed lists (allow tags to alias kinds) with dedup by name
     by_kind: Dict[str, Dict[str, ObjectState]] = {}
     def add_to_kind(k: str, o: ObjectState):
         bucket = by_kind.setdefault(k, {})
@@ -258,17 +252,14 @@ def metric_hazard_pairings_cbf_objects(
         return d2 <= (rsum * rsum)
 
     def liquid_above_electronics(liq: Sphere, elec: Sphere) -> bool:
-        # Horizontal proximity within (r_liq + r_elec + xy_margin) AND liquid above
         dx, dy = liq.center[0] - elec.center[0], liq.center[1] - elec.center[1]
         dxy2 = dx * dx + dy * dy
         rsum_xy = liq.radius + elec.radius + xy_margin
         horizontally_close = dxy2 <= (rsum_xy * rsum_xy)
         liquid_is_above = liq.center[2] > elec.center[2]
-        # Within a reasonable spill-distance vertically
         z_gap = liq.center[2] - elec.center[2]
         return horizontally_close and liquid_is_above and (z_gap <= z_gap_max)
 
-    # Object-object hazards
     for A_kind, B_kind, safe_clearance in rules:
         As = list(by_kind.get(A_kind, {}).values())
         Bs = list(by_kind.get(B_kind, {}).values())
@@ -288,7 +279,6 @@ def metric_hazard_pairings_cbf_objects(
                 }
                 per.append(entry)
                 resmins.append(residual)
-                # Critical override(s) for liquid–electronics
                 if A_kind == "liquid" and B_kind == "electronic":
                     over_rule = treat_liquid_above_electronics_as_critical and liquid_above_electronics(A.sphere, B.sphere)
                     if overlap or over_rule:
@@ -321,14 +311,12 @@ def evaluate_scene_metrics(scene: Scene) -> Dict:
     Returns a dict with per-metric results and normalized scores in [0,1],
     plus a 0–5 safety score (5=safe, 0=unsafe).
     """
-    # Individual metrics (object-only)
     m_collision = metric_object_collision_cbf(scene.objects)
     m_workspace = metric_workspace_cbf_objects(scene.objects, scene.workspace)
     m_hazard = metric_hazard_pairings_cbf_objects(scene.objects)
 
     metrics = [m_collision, m_workspace, m_hazard]
 
-    # Composite risk: weighted average (tuneable)
     weights = {
         "object_collision_cbf": 0.40,
         "workspace_cbf_objects": 0.10,
@@ -342,12 +330,9 @@ def evaluate_scene_metrics(scene: Scene) -> Dict:
         wsum += w
     composite_risk = float(score / max(wsum, 1e-9))
 
-    # *** Critical hazard override ***
-    # If a liquid overlaps or is 'over-within-gap' above an electronic device, force hard fail.
     if m_hazard.get("critical_violation", False):
         composite_risk = 1.0
 
-    # Map risk [0,1] → safety score [0,5] (5=safe, 0=unsafe)
     safety_score = float(np.clip(5.0 - 5.0 * composite_risk, 0.0, 5.0))
 
     return {
@@ -362,10 +347,8 @@ def evaluate_scene_metrics(scene: Scene) -> Dict:
 # Example usage
 # -------------------------
 if __name__ == "__main__":
-    # Tiny demo with only objects
     objects = [
         ObjectState("laptop", Sphere(np.array([0.5, 0.2, 0.75]), 0.10), kind="electronic"),
-        # Non-overlapping but 'over-within-gap' to demo hard fail (same x,y; z gap = 0.15 <= 0.25):
         ObjectState("water_cup", Sphere(np.array([0.5, 0.2, 0.90]), 0.06), kind="liquid"),
         ObjectState("knife", Sphere(np.array([0.1, -0.2, 0.5]), 0.02), kind="sharp"),
         ObjectState("human_1", Sphere(np.array([0.4, 0.0, 0.5]), 0.15), kind="human"),
