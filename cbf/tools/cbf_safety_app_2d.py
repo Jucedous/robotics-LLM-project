@@ -5,7 +5,7 @@ Robust version: guards against bad specs (None / malformed) and logs skips.
 from __future__ import annotations
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
-
+import os
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
 
@@ -39,10 +39,33 @@ class CBFSafetyApp2D:
         self.ARENA_EDGE_COLOR = ARENA_EDGE_COLOR
         self.GRID_ALPHA = GRID_ALPHA
 
-        self.fig = plt.figure(figsize=fig_size)
-        gs = self.fig.add_gridspec(nrows=1, ncols=2, width_ratios=[2.2, 1.0])
-        self.ax = self.fig.add_subplot(gs[0, 0])
+        # self.fig = plt.figure(figsize=fig_size)
+        # self._toolbar_off()
+        # gs = self.fig.add_gridspec(nrows=1, ncols=2, width_ratios=[2.2, 1.0])
+        # self.ax = self.fig.add_subplot(gs[0, 0])
+        # self.ax_info = self.fig.add_subplot(gs[0, 1])
+
+        ui_scale = float(os.getenv("CBF_UI_SCALE", "1.25"))
+        self.fig = plt.figure(figsize=(12 * ui_scale, 7 * ui_scale), constrained_layout=False)
+        self._toolbar_off()
+
+        gs = self.fig.add_gridspec(
+            nrows=2,
+            ncols=2,
+            width_ratios=[2.4, 1.3],
+            height_ratios=[1.0, 0.40],
+            wspace=0.28,
+            hspace=0.28,
+            left=0.1,
+            right=0.9,
+            top=0.92,
+            bottom=0.12,
+        )
+
+        self.ax = self.fig.add_subplot(gs[:, 0])
         self.ax_info = self.fig.add_subplot(gs[0, 1])
+        self.ax_ctrl = self.fig.add_subplot(gs[1, 1])
+
         try:
             self.fig.canvas.manager.set_window_title("Interactive CBF Safety (2D) — Environment")
         except Exception:
@@ -66,7 +89,7 @@ class CBFSafetyApp2D:
         self._btn_close.on_clicked(self._on_close)
 
         (self._tb_name, self._tb_kind,
-         self._btn_add_obj, self._btn_del_obj) = setup_add_remove_controls(self.fig)
+         self._btn_add_obj, self._btn_del_obj) = setup_add_remove_controls(self.fig, self.ax_ctrl)
         self._btn_add_obj.on_clicked(self._on_add_object_click)
         self._btn_del_obj.on_clicked(self._on_remove_object_click)
 
@@ -157,7 +180,6 @@ class CBFSafetyApp2D:
         self._redraw_lazy()
 
     def show(self):
-        plt.tight_layout()
         plt.show()
 
     # Internals
@@ -175,6 +197,7 @@ class CBFSafetyApp2D:
         self._labels[spec["name"]] = lbl
 
     def _on_press(self, event):
+        self._toolbar_off()
         for d in self._draggables:
             d.on_press(event)
 
@@ -267,3 +290,15 @@ class CBFSafetyApp2D:
 
     def _on_close(self, _evt):
         plt.close(self.fig)
+
+    def _toolbar_off(self):
+        tb = getattr(self.fig.canvas, "toolbar", None)
+        if not tb:
+            return
+        try:
+            tb._active = None
+            tb.mode = ""
+            self.fig.canvas.draw_idle()
+        except Exception:
+            pass
+

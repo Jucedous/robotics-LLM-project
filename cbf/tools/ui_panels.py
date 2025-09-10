@@ -1,13 +1,10 @@
 from __future__ import annotations
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional
 import matplotlib.pyplot as plt
 from matplotlib.axes import Axes
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from matplotlib.widgets import Button, TextBox
-
-
-
 
 def setup_axes(
     ax: Axes,
@@ -27,7 +24,7 @@ def setup_axes(
     ax.set_autoscale_on(False)
     ax.set_aspect("equal", adjustable="box")
 
-    ax.set_title(title, color="black", fontsize=13, weight="bold")
+    ax.set_title(title, color="black", fontsize=13, weight="bold", pad=8)
     ax.set_facecolor(arena_face_color)
     ax.grid(True, alpha=grid_alpha)
 
@@ -49,59 +46,80 @@ def setup_axes(
     fig.canvas.mpl_connect("key_press_event", _keep_linear)
 
 
-
-
 def setup_info_panel(fig: Figure, ax_info: Axes) -> Dict[str, Any]:
     ax_info.set_axis_off()
     score_box = Rectangle((0.05, 0.75), 0.90, 0.20, transform=ax_info.transAxes,
                           ec="black", lw=1.5, fc=(0.95, 0.95, 0.95))
     ax_info.add_patch(score_box)
 
-
     ax_info.text(0.50, 0.88, "Safety Score (0–5)",
-                transform=ax_info.transAxes, ha="center", va="center",
-                fontsize=12, color="black", weight="bold")
-
+                 transform=ax_info.transAxes, ha="center", va="center",
+                 fontsize=12, color="black", weight="bold")
 
     txt_score_value = ax_info.text(0.50, 0.79, "—",
         transform=ax_info.transAxes,
         ha="center", va="center",
         fontsize=24, color="black", family="monospace")
 
-
     txt_info = ax_info.text(0.05, 0.70, "",
         transform=ax_info.transAxes,
         color="black", fontsize=10, family="monospace",
         ha="left", va="top")
 
-
-    ax_close = fig.add_axes([0.72, 0.08, 0.20, 0.06])
+    ax_close = fig.add_axes([0.72, 0.03, 0.20, 0.06])
     btn_close = Button(ax_close, "Close")
 
-
     return dict(score_box=score_box, txt_score_value=txt_score_value,
-    txt_info=txt_info, btn_close=btn_close)
+                txt_info=txt_info, btn_close=btn_close)
 
 
+def setup_add_remove_controls(fig: Figure, host_ax: Optional[Axes] = None):
+    """
+    Create 'Name' + 'Kind' TextBoxes and 'Add' + 'Remove' Buttons.
 
+    If host_ax is provided, controls are packed neatly inside that axis'
+    bounding box (figure coordinates). Otherwise we fall back to fixed
+    figure-relative positions that won't overlap the info panel.
 
-def setup_add_remove_controls(fig: Figure):
-    # Returns (tb_name, tb_kind, btn_add, btn_del)
-    gs = fig.add_gridspec(nrows=3, ncols=6, left=0.68, right=1.58, bottom=0.2, top=0.4, wspace=0.4, hspace=0.5)
+    Returns:
+        (tb_name, tb_kind, btn_add_obj, btn_del_obj)
+    """
+    if host_ax is None:
+        ax_name = fig.add_axes([0.72, 0.28, 0.24, 0.06])
+        ax_kind = fig.add_axes([0.72, 0.20, 0.24, 0.06])
+        ax_add  = fig.add_axes([0.72, 0.12, 0.115, 0.06])
+        ax_del  = fig.add_axes([0.845, 0.12, 0.115, 0.06])
+    else:
 
+        host_ax.set_axis_off()
 
-    ax_name = fig.add_subplot(gs[0, 0])
-    ax_kind = fig.add_subplot(gs[0, 1])
+        bbox = host_ax.get_position()
+        x0, y0, x1, y1 = bbox.x0, bbox.y0, bbox.x1, bbox.y1
+        W, H = (x1 - x0), (y1 - y0)
 
+        pad_lr = 0.06
+        row_h  = 0.22
+        gap    = 0.08
 
-    tb_name = TextBox(ax_name, "name", initial="")
-    tb_kind = TextBox(ax_kind, "kind", initial="")
+        top    = y0 + 0.88 * H
+        y_name = top - row_h * H
+        y_kind = y_name - gap * H - row_h * H
+        y_btns = y_kind - gap * H - row_h * H
 
+        ax_name = fig.add_axes([x0 + pad_lr * W, y_name, (1 - 2*pad_lr) * W, row_h * H])
+        ax_kind = fig.add_axes([x0 + pad_lr * W, y_kind, (1 - 2*pad_lr) * W, row_h * H])
+        half_w  = (1 - 2*pad_lr) * W * 0.5
+        ax_add  = fig.add_axes([x0 + pad_lr * W,            y_btns, half_w - 0.01 * W, row_h * H])
+        ax_del  = fig.add_axes([x0 + pad_lr * W + half_w + 0.01 * W, y_btns, half_w - 0.01 * W, row_h * H])
 
-    ax_add = fig.add_subplot(gs[1, 0:2])
-    ax_del = fig.add_subplot(gs[2, 0:2])
-    btn_add_obj = Button(ax_add, "Add object")
-    btn_del_obj = Button(ax_del, "Remove by name")
+    tb_name = TextBox(ax_name, "Name", initial="")
+    tb_kind = TextBox(ax_kind, "Kind", initial="")
+    btn_add_obj = Button(ax_add, "Add")
+    btn_del_obj = Button(ax_del, "Remove")
 
+    for a in (ax_name, ax_kind, ax_add, ax_del):
+        a.set_facecolor((0.98, 0.98, 0.99))
+        for spine in a.spines.values():
+            spine.set_alpha(0.15)
 
     return tb_name, tb_kind, btn_add_obj, btn_del_obj
