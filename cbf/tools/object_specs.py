@@ -5,9 +5,6 @@ import json
 import numpy as np
 
 
-# ---- Object spec helpers ----------------------------------------------------
-
-
 def read_json_specs(path: str | Path) -> List[Dict[str, Any]]:
     p = Path(path)
     if not p.exists():
@@ -17,9 +14,6 @@ def read_json_specs(path: str | Path) -> List[Dict[str, Any]]:
     if not isinstance(data, list):
         raise ValueError("Scene JSON must be a list of object specs.")
     return data
-
-
-
 
 def normalize_spec(
     idx: int,
@@ -34,11 +28,9 @@ def normalize_spec(
     if not isinstance(item, dict):
         raise ValueError(f"Entry #{idx} is not an object/dict.")
 
-
     X_MIN, X_MAX = xlim
     Y_MIN, Y_MAX = ylim
     Z_MIN, Z_MAX = zlim
-
 
     name = str(item.get("name", f"obj_{idx}"))
     if "center" in item and "radius" in item:
@@ -54,13 +46,10 @@ def normalize_spec(
         z = float(item.get("z", 0.0))
         r = float(item.get("r", 0.08))
 
-
     kind = str(item.get("kind", "object")).strip().lower()
     if kind not in valid_kinds:
         kind = "object"
 
-
-    # Clip into arena
     r = max(1e-6, min(r, (X_MAX - X_MIN) * 0.5))
     x = float(np.clip(xy[0], X_MIN + r, X_MAX - r))
     y = float(np.clip(xy[1], Y_MIN + r, Y_MAX - r))

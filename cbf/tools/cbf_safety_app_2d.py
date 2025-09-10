@@ -245,18 +245,15 @@ class CBFSafetyApp2D:
             kind_in = (self._tb_kind.text or "").strip().lower()
 
             if not kind_in:
-                # what the LLM is allowed to pick from:
                 all_kinds = tuple(self.OBJECT_STYLE.keys())
                 allowed_for_llm = [k for k in all_kinds if k not in ("object",)]
-                # ensure unknown renders, but don't *offer* "object" to the LLM
                 if "unknown" not in self.OBJECT_STYLE:
                     self.OBJECT_STYLE["unknown"] = self.OBJECT_STYLE.get("object", {})
                 kind_in = classify_kind_via_llm(
                     name=name_in,
-                    allowed_kinds=allowed_for_llm + ["unknown"],  # keep unknown as explicit fallback
-                    description="",  # (optional: add a Description field later)
+                    allowed_kinds=allowed_for_llm + ["unknown"],
+                    description="",
             )
-
 
             spec = dict(
                 name=name_in,
@@ -266,7 +263,6 @@ class CBFSafetyApp2D:
                 r=float(0.08),
             )
 
-            # include 'unknown' in known_kinds so normalize_spec doesn't force 'object'
             known = tuple(set(self.OBJECT_STYLE.keys()) | {"unknown"})
             spec = normalize_spec(
                 len(self._objects), spec,
