@@ -31,7 +31,6 @@ def _strip(s: str) -> str:
     return (s or "").strip()
 
 def _first_token(s: str) -> str:
-    # grab first non-empty word-like token
     m = re.search(r"[A-Za-z0-9_\-]+", s or "")
     return m.group(0) if m else ""
 
@@ -42,7 +41,6 @@ def _normalize_kind(ans: str, allowed_lower: set[str]) -> str:
 def _call_ollama_cli(model: str, prompt: str, timeout: float = 20.0) -> str:
     bin_path = os.getenv("OLLAMA_BIN", "ollama")
     cmd = [bin_path, "run", model]
-    # Feed prompt on stdin to avoid shell quoting nightmares
     try:
         p = subprocess.run(
             cmd, input=prompt.encode("utf-8"),
@@ -51,7 +49,6 @@ def _call_ollama_cli(model: str, prompt: str, timeout: float = 20.0) -> str:
         )
         out = p.stdout.decode("utf-8", errors="ignore")
         if not out.strip():
-            # Some ollama builds emit stderr only for model pulls; try merging
             out = (out + "\n" + p.stderr.decode("utf-8", errors="ignore")).strip()
         return out.strip()
     except Exception as e:
@@ -89,9 +86,7 @@ def classify_kind_via_llm(
     if backend == "none":
         return "unknown"
 
-    # default: CLI
     raw = _call_ollama_cli(model, prompt, timeout=timeout)
     if raw.startswith("__ERR__"):
         return "unknown"
-    # Many local models will add trailing text; take the first token only and validate
     return _normalize_kind(raw, allowed_lower)
