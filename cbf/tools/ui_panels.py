@@ -8,6 +8,7 @@ from matplotlib.widgets import Button, TextBox
 
 
 
+
 def setup_axes(
     ax: Axes,
     *,
@@ -18,19 +19,34 @@ def setup_axes(
     arena_edge_color=(0.75, 0.78, 0.85),
     grid_alpha: float = 0.35,
 ) -> None:
-    ax.set_aspect("equal", adjustable="box")
+    ax.set_xscale("linear")
+    ax.set_yscale("linear")
+
     ax.set_xlim(*xlim)
     ax.set_ylim(*ylim)
+    ax.set_autoscale_on(False)
+    ax.set_aspect("equal", adjustable="box")
+
     ax.set_title(title, color="black", fontsize=13, weight="bold")
     ax.set_facecolor(arena_face_color)
     ax.grid(True, alpha=grid_alpha)
+
     ax.add_patch(Rectangle(
         (xlim[0], ylim[0]),
         xlim[1] - xlim[0], ylim[1] - ylim[0],
         fill=False, lw=2.0, ec=arena_edge_color,
     ))
+
     ax.axhline(0.0, lw=0.8, ls="--", alpha=0.25)
     ax.axvline(0.0, lw=0.8, ls="--", alpha=0.25)
+
+    fig = ax.figure
+    def _keep_linear(ev):
+        if ev.inaxes is ax and ev.key in ("l", "L"):
+            ax.set_xscale("linear")
+            ax.set_yscale("linear")
+            fig.canvas.draw_idle()
+    fig.canvas.mpl_connect("key_press_event", _keep_linear)
 
 
 

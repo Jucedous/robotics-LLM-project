@@ -24,14 +24,8 @@ from .cbf_safety_metrics import Sphere, ObjectState, Workspace, Scene, evaluate_
 
 AppClass = None
 APP_DIM = "2D"
-try:
-    mod3d = importlib.import_module(".tools.cbf_safety_app_3d", package=__package__)
-    AppClass = getattr(mod3d, "CBFSafetyApp3D")
-    APP_DIM = "3D"
-except Exception:
-    mod2d = importlib.import_module(".tools.cbf_safety_app_2d", package=__package__)
-    AppClass = getattr(mod2d, "CBFSafetyApp2D")
-    APP_DIM = "2D"
+mod2d = importlib.import_module(".tools.cbf_safety_app_2d", package=__package__)
+AppClass = getattr(mod2d, "CBFSafetyApp2D")
 
 CURRENT_SCENE_PATH: Path | None = None
 
@@ -73,7 +67,19 @@ def _atomic_write_json(path: Path, data: List[Dict[str, Any]]) -> None:
 def open_scene(app, path: Path): 
     """Load a scene file and remember it as the 'current' one."""
     global CURRENT_SCENE_PATH
-    app.load_objects_from_json(path)
+    try:
+        with open(path, "r") as f:
+            data = json.load(f)
+        if isinstance(data, list):
+            specs = data
+        elif isinstance(data, dict):
+            specs = data.get("objects", [])
+        else:
+            specs = []
+    except Exception:
+        specs = []
+    app.clear_objects()
+    app.add_objects_from_specs(specs)
     CURRENT_SCENE_PATH = path
 
 def save_current_scene(app):
@@ -128,37 +134,41 @@ def main():
 
     app = AppClass()
 
-    if args.scene:
-        p = Path(args.scene)
-        if p.exists():
-            open_scene(app, p)
-        else:
-            global CURRENT_SCENE_PATH
-            CURRENT_SCENE_PATH = p
-            demo_specs = [
-                {"name": "laptop", "kind": "electronic", "r": 0.12, "xy": (0.0, 0.0), "z": 0.70},
-                {"name": "cup",    "kind": "liquid",     "r": 0.06, "xy": (0.30, 0.0), "z": 0.90},
-            ]
-            if hasattr(app, "add_objects_from_specs"):
-                app.add_objects_from_specs(demo_specs)
-            save_current_scene(app)
-    else:
-        demo_specs = [
-            {"name": "laptop", "kind": "electronic", "r": 0.12, "xy": (0.0, 0.0), "z": 0.70},
-            {"name": "cup",    "kind": "liquid",     "r": 0.06, "xy": (0.30, 0.0), "z": 0.90},
-        ]
-        if hasattr(app, "add_objects_from_specs"):
-            app.add_objects_from_specs(demo_specs)
+    if not args.scene:
+        print("Error: --scene argument is required.")
+        exit(1)
+    
+    p = Path(args.scene)
+    if not p.exists():
+        print(f"Error: scene file not found: {p}")
+        exit(1)
+    
+    open_scene(app, p)
 
     def on_change():
         try:
             specs = app.get_current_specs()
+            if not specs:
+                app.set_info_lines(["(no objects)"])
+                app.set_score(5.0)
+                save_current_scene(app)
+                return
+
             scene = _specs_to_scene(specs, app)
             out = evaluate_scene_metrics(scene)
-            score = float(out.get("safety_score_0_to_5", 0.0))
+
+            score = out.get("safety_score_0_to_5", 0.0)
+            try:
+                score = float(score)
+                if not np.isfinite(score):
+                    score = 0.0
+            except Exception:
+                score = 0.0
+
             app.set_score(score)
             app.set_info_lines(_format_info(out))
             save_current_scene(app)
+
         except Exception as e:
             app.set_info_lines([f"Error in on_change: {e!r}"])
 
