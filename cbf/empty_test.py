@@ -33,6 +33,7 @@ KIND_MAP = {
     "water": "liquid",
     "electronics": "electronic",
 }
+
 def _normalize_kind(k: str) -> str:
     k2 = KIND_MAP.get(str(k).lower().strip(), str(k).lower().strip())
     return k2
@@ -65,7 +66,6 @@ def _atomic_write_json(path: Path, data: List[Dict[str, Any]]) -> None:
             pass
 
 def open_scene(app, path: Path): 
-    """Load a scene file and remember it as the 'current' one."""
     global CURRENT_SCENE_PATH
     try:
         with open(path, "r") as f:
@@ -83,7 +83,6 @@ def open_scene(app, path: Path):
     CURRENT_SCENE_PATH = path
 
 def save_current_scene(app):
-    """Overwrite the currently opened scene JSON (if any)."""
     if CURRENT_SCENE_PATH is None:
         return
     specs = app.get_current_specs()
@@ -127,6 +126,19 @@ def _format_info(out: Dict[str, Any]) -> List[str]:
             lines.append(f"[{nm:<22}] risk={rk:0.3f}")
     return lines
 
+def _format_object_list(specs: List[Dict[str, Any]]) -> List[str]:
+    lines: List[str] = []
+    lines.append("")  # spacer
+    lines.append("Objects in scene:")
+    if not specs:
+        lines.append("(none)")
+        return lines
+    for s in specs:
+        name = str(s.get("name", "unnamed"))
+        kind = _normalize_kind(s.get("kind", "object"))
+        lines.append(f"- {name}: {kind}")
+    return lines
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--scene", type=str, default="", help="Path to scene JSON to open")
@@ -166,7 +178,11 @@ def main():
                 score = 0.0
 
             app.set_score(score)
-            app.set_info_lines(_format_info(out))
+            # app.set_info_lines(_format_info(out))
+            info_lines = _format_info(out)
+            info_lines += _format_object_list(specs)
+            app.set_info_lines(info_lines)
+            
             save_current_scene(app)
 
         except Exception as e:

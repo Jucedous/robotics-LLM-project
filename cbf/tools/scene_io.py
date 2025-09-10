@@ -14,9 +14,6 @@ def load_specs(path: str | Path) -> List[Dict]:
         raise ValueError("Scene JSON must be a list of object specs.")
     return data
 
-
-
-
 def save_specs(path: str | Path, specs: List[Dict]) -> None:
     p = Path(path)
     with p.open("w", encoding="utf-8") as f:
