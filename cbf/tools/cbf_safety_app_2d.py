@@ -17,6 +17,9 @@ from .scene_schema import normalize_spec
 from .scene_io import load_specs
 
 
+from .llm_kind_classifier import classify_kind_via_llm
+
+
 class CBFSafetyApp2D:
     def __init__(
         self,
@@ -32,6 +35,8 @@ class CBFSafetyApp2D:
         self.Z_MIN, self.Z_MAX = zlim
 
         self.OBJECT_STYLE = object_style or DEFAULT_OBJECT_STYLE
+        if "unknown" not in self.OBJECT_STYLE:
+            self.OBJECT_STYLE["unknown"] = self.OBJECT_STYLE.get("object", {})
         self.LABEL_KW = dict(LABEL_KW)
         self.TITLE_KW = dict(TITLE_KW)
         self.INFO_KW = dict(INFO_KW)
@@ -236,21 +241,42 @@ class CBFSafetyApp2D:
 
     def _on_add_object_click(self, _evt):
         try:
+            name_in = self._tb_name.text.strip() or "obj"
+            kind_in = (self._tb_kind.text or "").strip().lower()
+
+            if not kind_in:
+                # what the LLM is allowed to pick from:
+                all_kinds = tuple(self.OBJECT_STYLE.keys())
+                allowed_for_llm = [k for k in all_kinds if k not in ("object",)]
+                # ensure unknown renders, but don't *offer* "object" to the LLM
+                if "unknown" not in self.OBJECT_STYLE:
+                    self.OBJECT_STYLE["unknown"] = self.OBJECT_STYLE.get("object", {})
+                kind_in = classify_kind_via_llm(
+                    name=name_in,
+                    allowed_kinds=allowed_for_llm + ["unknown"],  # keep unknown as explicit fallback
+                    description="",  # (optional: add a Description field later)
+            )
+
+
             spec = dict(
-                name=self._tb_name.text.strip() or "obj",
-                kind=self._tb_kind.text.strip().lower() or "object",
+                name=name_in,
+                kind=kind_in,
                 xy=(float(0.0), float(0.0)),
                 z=float(0.6),
                 r=float(0.08),
             )
+
+            # include 'unknown' in known_kinds so normalize_spec doesn't force 'object'
+            known = tuple(set(self.OBJECT_STYLE.keys()) | {"unknown"})
             spec = normalize_spec(
                 len(self._objects), spec,
                 xlim=(self.X_MIN, self.X_MAX),
                 ylim=(self.Y_MIN, self.Y_MAX),
                 zlim=(self.Z_MIN, self.Z_MAX),
-                known_kinds=tuple(self.OBJECT_STYLE.keys()),
+                known_kinds=known,
                 default_kind="object",
             )
+
             if any(o["name"] == spec["name"] for o in self._objects):
                 spec["name"] = f'{spec["name"]}_{len(self._objects)}'
             self._add_one(spec)
@@ -259,7 +285,7 @@ class CBFSafetyApp2D:
             self._redraw_lazy()
         except Exception as e:
             print("[CBFSafetyApp2D] add object failed:", e)
-        
+
         self._tb_name.set_val("")
         self._tb_kind.set_val("")
 
