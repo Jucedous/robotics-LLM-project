@@ -108,10 +108,6 @@ def metric_object_collision_cbf(
     scale_h: float = 0.01,
     scale_res: float = 0.05,
 ) -> Dict:
-    """
-    Object–object collision avoidance CBF.
-    For every unordered object pair (i<j), compute squared-distance barrier and residual.
-    """
     per_pairs = []
     h_min = np.inf
     res_min = np.inf
@@ -153,14 +149,8 @@ def metric_workspace_cbf_objects(
     scale_res: float = 0.05,
     clearance: float = 0.0,
 ) -> Dict:
-    """
-    Workspace AABB constraint using **sphere extents** (keeps full spheres inside).
-    For each object, active margin is the smallest distance from the sphere surface to any face.
-    Warning: if clearance > 0, spheres may not fit inside the workspace!
-    """
     if workspace is None:
         return {"name": "workspace_cbf_objects", "risk": 0.0, "details": [], "explanation": "No workspace bounds provided."}
-
     per = []
     hmins = []
     resmins = []

@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle
 from cbf.tools.draggable_circle import DraggableCircle
 
-from .cbf_safety_metrics import (
+from ..cbf_safety_metrics import (
     ObjectState, Sphere, Workspace, Scene, evaluate_scene_metrics
 )
 
