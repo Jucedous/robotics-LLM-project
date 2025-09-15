@@ -42,9 +42,9 @@ def simulate_linear_path(p_start, p_end, total_time, dt):
 
 def score_frame(p_liquid, v_liquid, p_laptop, r_liquid, r_laptop):
     water = CBF.ObjectState(
-        name="water",
+        name="human1",
         sphere=CBF.Sphere(center=p_liquid, radius=r_liquid),
-        kind="liquid",
+        kind="human",
         velocity=v_liquid,
     )
     laptop = CBF.ObjectState(

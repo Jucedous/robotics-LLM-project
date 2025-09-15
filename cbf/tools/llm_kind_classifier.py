@@ -75,7 +75,7 @@ def classify_kind_via_llm(
     allowed_lower = {k.lower() for k in allowed}
 
     backend = (backend or os.getenv("CBF_LLM_BACKEND", "cli")).lower()
-    model = model or os.getenv("CBF_LLM_MODEL", "llama3.1:8b")
+    model = model or os.getenv("CBF_LLM_MODEL", "gemma3:27b")
 
     prompt = PROMPT_TEMPLATE.format(
         allowed=", ".join(sorted(allowed)),
