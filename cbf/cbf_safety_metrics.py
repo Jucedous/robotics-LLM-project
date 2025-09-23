@@ -326,28 +326,7 @@ def evaluate_scene_metrics(scene: Scene) -> Dict:
 
     return {
         "metrics": metrics,
-        "composite_risk": composite_risk,      # 0 (safe) → 1 (risky)
-        "safety_score_0_to_5": safety_score,   # 0 → 5
-        "safety_grade_1_to_5": safety_score,   # kept for back-compat GUIs
+        "composite_risk": composite_risk,
+        "safety_score_0_to_5": safety_score,
+        "safety_grade_1_to_5": safety_score,
     }
-
-
-# -------------------------
-# Example usage
-# -------------------------
-if __name__ == "__main__":
-    objects = [
-        ObjectState("laptop", Sphere(np.array([0.5, 0.2, 0.75]), 0.10), kind="electronic"),
-        ObjectState("water_cup", Sphere(np.array([0.5, 0.2, 0.90]), 0.06), kind="liquid"),
-        ObjectState("knife", Sphere(np.array([0.1, -0.2, 0.5]), 0.02), kind="sharp"),
-        ObjectState("human_1", Sphere(np.array([0.4, 0.0, 0.5]), 0.15), kind="human"),
-        ObjectState("glass_vase", Sphere(np.array([0.2, 0.1, 0.6]), 0.08), kind="fragile"),
-        ObjectState("cast_iron_pan", Sphere(np.array([0.3, 0.1, 0.6]), 0.09), kind="heavy"),
-    ]
-
-    workspace = Workspace(bounds=np.array([[-1.0, 1.0], [-1.0, 1.0], [0.0, 1.5]]))
-    scene = Scene(objects=objects, workspace=workspace)
-
-    out = evaluate_scene_metrics(scene)
-    from pprint import pprint
-    pprint(out)
