@@ -1,0 +1,62 @@
+{
+  "version": "2.0",
+  "scene_frame": "world",
+  "objects": [
+    {"id": "cup", "class": "cup", "frame": "cup"},
+    {"id": "laptop", "class": "laptop", "frame": "laptop"}
+  ],
+  "hazards": [
+    {
+      "id": "liquid_above_electronics",
+      "semantics": "Avoid cup above laptop by margin.",
+      "symbol_table": ["z_cup", "z_laptop", "margin"],
+      "state_bindings": {
+        "z_cup": "pose(cup).z",
+        "z_laptop": "pose(laptop).z",
+        "margin": 0.03
+      },
+      "h_expression": "z_laptop + margin - z_cup",
+      "alpha": 2.0,
+      "units": "SI",
+      "assumptions": "z in meters; larger h => safer (cup below).",
+      "jacobian": {
+        "z_cup": "-1",
+        "z_laptop": "1"
+      },
+      "tests": [
+        {
+          "state": {"z_cup": 0.30, "z_laptop": 0.05, "margin": 0.03},
+          "expected_h_sign": "negative",
+          "note": "cup above laptop ⇒ unsafe"
+        },
+        {
+          "state": {"z_cup": 0.02, "z_laptop": 0.05, "margin": 0.03},
+          "expected_h_sign": "nonnegative"
+        }
+      ]
+    },
+    {
+      "id": "keep_distance",
+      "semantics": "Keep Euclidean distance ≥ d_min.",
+      "symbol_table": ["x_cup","y_cup","z_cup","x_laptop","y_laptop","z_laptop","d_min"],
+      "state_bindings": {
+        "x_cup": "pose(cup).x", "y_cup": "pose(cup).y", "z_cup": "pose(cup).z",
+        "x_laptop": "pose(laptop).x","y_laptop": "pose(laptop).y","z_laptop": "pose(laptop).z",
+        "d_min": 0.20
+      },
+      "h_expression": "(x_cup-x_laptop)**2 + (y_cup-y_laptop)**2 + (z_cup-z_laptop)**2 - d_min**2",
+      "alpha": 2.0,
+      "units": "SI",
+      "assumptions": "positions in meters; squared distance form for differentiability.",
+      "tests": [
+        {
+          "state": {
+            "x_cup":0.00,"y_cup":0.00,"z_cup":0.30,
+            "x_laptop":0.02,"y_laptop":0.01,"z_laptop":0.05,"d_min":0.20
+          },
+          "expected_h_sign": "negative"
+        }
+      ]
+    }
+  ]
+}
