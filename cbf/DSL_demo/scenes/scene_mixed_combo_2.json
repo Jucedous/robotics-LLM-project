@@ -1,0 +1,9 @@
+{
+  "objects": [
+    { "name": "stove",           "position": [0.00, 0.00, 0.00] },
+    { "name": "cloth",           "position": [0.10, 0.10, 0.05] },
+    { "name": "power strip",     "position": [0.25, 0.00, 0.05] },
+    { "name": "bottle of water", "position": [0.30, 0.02, 0.05] },
+    { "name": "monitor",         "position": [0.12, 0.12, 0.05] }
+  ]
+}

@@ -1,0 +1,6 @@
+{
+    "objects": [
+        {"name": "knife", "position": [0.00, 0.00, 0.10]},
+        {"name": "hand", "position": [0.10, 0.10, 0.10]}
+    ]
+}

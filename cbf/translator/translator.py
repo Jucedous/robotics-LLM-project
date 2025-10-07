@@ -2,9 +2,6 @@ from dataclasses import dataclass
 from typing import Dict, List, Any
 import sympy as sp
 
-ALLOWED_FUNCS = {"sqrt": sp.sqrt, "sin": sp.sin, "cos": sp.cos, "Abs": sp.Abs}
-ALLOWED = set(list("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_+*-//()[]{} .,\n\t^"))  # coarse
-
 def _safe_sympify(expr: str, symbols: Dict[str, sp.Symbol]) -> sp.Expr:
     if not set(expr) <= ALLOWED:
         raise ValueError("Disallowed characters in expression.")
@@ -32,8 +29,6 @@ def compile_hazards(spec: Dict[str, Any]) -> List[CBFConstraint]:
     for hz in spec["hazards"]:
         cbf_syms = {name: sp.symbols(name) for name in hz["symbol_table"]}
         h_expr = _safe_sympify(hz["h_expression"], cbf_syms)
-
-        # variables that come from state (numbers in state_bindings are treated as constants)
         state_syms = [name for name, bind in hz["state_bindings"].items()
                       if not isinstance(bind, (int, float))]
         symbols = [cbf_syms[n] for n in state_syms]

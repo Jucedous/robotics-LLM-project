@@ -1,0 +1,10 @@
+{
+  "objects": [
+    { "name": "cup of water", "position": [0.00, 0.02, 0.28] },
+    { "name": "laptop",       "position": [0.02, 0.02, 0.05] },
+    { "name": "candle",       "position": [0.30, 0.20, 0.10] },
+    { "name": "tablet",       "position": [0.32, 0.22, 0.05] },
+    { "name": "magnet",       "position": [0.60, 0.60, 0.05] },
+    { "name": "credit card",  "position": [0.65, 0.60, 0.05] }
+  ]
+}

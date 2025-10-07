@@ -1,0 +1,6 @@
+{
+  "objects": [
+    { "name": "outlet", "position": [0.0, 0.0, 0.0] },
+    { "name": "bottle of water", "position": [0.1, 0.0, 0.05] }
+  ]
+}

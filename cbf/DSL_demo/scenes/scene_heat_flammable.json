@@ -1,0 +1,6 @@
+{
+    "objects": [
+        {"name": "candle", "position": [0.10, 0.10, 0.10]},
+        {"name": "paper", "position": [0.12, 0.12, 0.05]}
+    ]
+}
