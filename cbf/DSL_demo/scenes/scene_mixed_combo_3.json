@@ -1,0 +1,29 @@
+{
+  "objects": [
+    { "name": "cup of water",   "position": [0.00, 0.00, 0.28] },
+    { "name": "laptop",         "position": [0.02, 0.00, 0.05] },
+
+    { "name": "candle",         "position": [0.30, 0.05, 0.10] },
+    { "name": "paper",          "position": [0.32, 0.05, 0.05] },
+
+    { "name": "magnet",         "position": [0.60, 0.60, 0.05] },
+    { "name": "credit card",    "position": [0.66, 0.60, 0.05] },
+
+    { "name": "outlet",         "position": [0.10, 0.30, 0.05] },
+    { "name": "bottle of water","position": [0.15, 0.30, 0.05] },
+
+    { "name": "end effector",   "position": [0.20, 0.20, 0.30], "velocity": [0.00, 0.00, -0.20] },
+    { "name": "hand",           "position": [0.20, 0.20, 0.05] },
+
+    { "name": "vase",           "position": [0.90, 0.90, 0.25], "mass": 6.0 },
+    { "name": "glass",          "position": [0.90, 0.90, 0.05] },
+
+    { "name": "bleach",         "position": [0.05, 0.50, 0.05] },
+    { "name": "person",         "position": [0.10, 0.50, 0.05] },
+    { "name": "sandwich",       "position": [0.08, 0.54, 0.05] },
+
+    { "name": "knife",          "position": [0.20, 0.24, 0.05] },
+    { "name": "monitor",        "position": [0.34, 0.05, 0.05] },
+    { "name": "cloth",          "position": [0.30, 0.05, 0.25] }
+  ]
+}
