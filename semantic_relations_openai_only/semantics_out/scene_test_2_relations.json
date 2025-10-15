@@ -1,0 +1,39 @@
+{
+  "scene_file": "examples/scene_test_2.json",
+  "pairwise_relations": [
+    {
+      "objects": [
+        "spk1",
+        "hdd1"
+      ],
+      "rule": "magnetic_interference_proximity",
+      "severity": 3.0,
+      "confidence": 0.9,
+      "interpretation_3d": "Speaker magnet is directly above or very close to the external hard drive, risking magnetic interference.",
+      "constraints": [
+        {
+          "lhs": "x(spk1)",
+          "op": "=",
+          "rhs": "x(hdd1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "y(spk1)",
+          "op": "=",
+          "rhs": "y(hdd1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "z(spk1)",
+          "op": ">=",
+          "rhs": "z(hdd1)",
+          "note": "speaker magnet above or at same height as hard drive"
+        }
+      ]
+    }
+  ],
+  "provider_meta": {
+    "name": "OpenAIProvider",
+    "model": "gpt-4.1-mini"
+  }
+}

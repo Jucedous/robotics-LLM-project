@@ -1,0 +1,39 @@
+{
+  "scene_file": "examples/scene_test.json",
+  "pairwise_relations": [
+    {
+      "objects": [
+        "can1",
+        "st1"
+      ],
+      "rule": "flammable_object_above_flame",
+      "severity": 5.0,
+      "confidence": 0.9,
+      "interpretation_3d": "The aerosol spray can is positioned above or at the same level as the gas stove flame, posing a fire hazard.",
+      "constraints": [
+        {
+          "lhs": "x(can1)",
+          "op": "=",
+          "rhs": "x(st1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "y(can1)",
+          "op": "=",
+          "rhs": "y(st1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "z(can1)",
+          "op": ">=",
+          "rhs": "z(st1)",
+          "note": "can is at or above flame level"
+        }
+      ]
+    }
+  ],
+  "provider_meta": {
+    "name": "OpenAIProvider",
+    "model": "gpt-4.1-mini"
+  }
+}

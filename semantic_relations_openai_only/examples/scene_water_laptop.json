@@ -1,0 +1,12 @@
+{
+  "objects": [
+    {
+      "id": "cup1",
+      "kind": "water_cup"
+    },
+    {
+      "id": "lap1",
+      "kind": "laptop"
+    }
+  ]
+}

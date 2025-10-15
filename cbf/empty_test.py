@@ -5,7 +5,7 @@ empty_test.py:
 • Opens a scene JSON via --scene and saves changes back to the SAME file atomically
 
 Run:
-  python -m cbf.empty_test --scene scenes/scene1.json
+  python3 -m cbf.empty_test --scene scenes/scene1.json
 """
 
 from __future__ import annotations

@@ -1,0 +1,8 @@
+{
+  "scene_file": "examples/scene_equation_test.json",
+  "pairwise_relations": [],
+  "provider_meta": {
+    "name": "OpenAIProvider",
+    "model": "gpt-4.1-mini"
+  }
+}

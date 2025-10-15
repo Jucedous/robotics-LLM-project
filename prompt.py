@@ -4,6 +4,7 @@
 # 3. ethical score?
 # 4. robot operation procedure
 # 5. backwards check
+API_KEY = "[REDACTED_OPENAI_KEY]"
 PROMPT_NAME = "hi whats your name?"
 PROMPT_HI = "hi how are you doing?"
 PROMPT_ANALYZE_SAFETY_OBJECTS = (

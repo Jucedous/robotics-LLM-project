@@ -1,0 +1,6 @@
+{
+  "objects": [
+    {"id": "spk1", "kind": "speaker_magnet"},
+    {"id": "hdd1", "kind": "external_hard_drive"}
+  ]
+}

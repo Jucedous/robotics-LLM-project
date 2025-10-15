@@ -1,0 +1,6 @@
+{
+  "objects": [
+    {"id": "can1", "kind": "aerosol_spray_can"},
+    {"id": "st1",  "kind": "gas_stove_flame"}
+  ]
+}

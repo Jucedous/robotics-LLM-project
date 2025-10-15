@@ -1,0 +1,10 @@
+{
+  "rule_hint": "<optional canonical rule>",
+  "objects": [
+    {"id": "objA", "kind": "<kindA>"},
+    {"id": "objB", "kind": "<kindB>"}
+  ],
+  "roles": {"A": "objA", "B": "objB"},
+  "bindings": {"xy_margin": 0.03, "z_gap_max": 0.10},
+  "instructions": "Return a single JSON object per the contract with 2–5 equations and CBF forms."
+}

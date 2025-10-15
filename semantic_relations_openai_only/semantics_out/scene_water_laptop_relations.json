@@ -1,0 +1,39 @@
+{
+  "scene_file": "examples/scene_water_laptop.json",
+  "pairwise_relations": [
+    {
+      "objects": [
+        "cup1",
+        "lap1"
+      ],
+      "rule": "object_above_electronic_device",
+      "severity": 3.0,
+      "confidence": 0.9,
+      "interpretation_3d": "The cup is positioned above the laptop, posing a spill risk.",
+      "constraints": [
+        {
+          "lhs": "x(cup1)",
+          "op": "=",
+          "rhs": "x(lap1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "y(cup1)",
+          "op": "=",
+          "rhs": "y(lap1)",
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "z(cup1)",
+          "op": ">=",
+          "rhs": "z(lap1)",
+          "note": "cup is above laptop"
+        }
+      ]
+    }
+  ],
+  "provider_meta": {
+    "name": "OpenAIProvider",
+    "model": "gpt-4.1-mini"
+  }
+}

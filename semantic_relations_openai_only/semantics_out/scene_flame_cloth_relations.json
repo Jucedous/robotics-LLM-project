@@ -1,0 +1,39 @@
+{
+  "scene_file": "examples/scene_flame_cloth.json",
+  "pairwise_relations": [
+    {
+      "objects": [
+        "fl1",
+        "cl1"
+      ],
+      "rule": "open_flame_near_flammable_cloth",
+      "severity": 4.5,
+      "confidence": 0.85,
+      "interpretation_3d": "Flame adjacent to cloth at similar height risks ignition.",
+      "constraints": [
+        {
+          "lhs": "z(fl1)",
+          "op": "=",
+          "rhs": "z(cl1)",
+          "note": "same height"
+        },
+        {
+          "lhs": "x(fl1)",
+          "op": "=",
+          "rhs": "x(cl1)",
+          "note": "canonical adjacency x"
+        },
+        {
+          "lhs": "y(fl1)",
+          "op": "=",
+          "rhs": "y(cl1)",
+          "note": "canonical adjacency y"
+        }
+      ]
+    }
+  ],
+  "provider_meta": {
+    "name": "OpenAIProvider",
+    "model": "gpt-4.1-mini"
+  }
+}

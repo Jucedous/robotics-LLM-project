@@ -1,0 +1,12 @@
+{
+  "objects": [
+    {
+      "id": "fl1",
+      "kind": "candle_flame"
+    },
+    {
+      "id": "cl1",
+      "kind": "cotton_cloth"
+    }
+  ]
+}
