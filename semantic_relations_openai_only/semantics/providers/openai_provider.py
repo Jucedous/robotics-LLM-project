@@ -13,7 +13,7 @@ def _extract_json(text: str) -> Dict[str, Any]:
 class OpenAIProvider:
     """Pure OpenAI Chat Completions provider — no heuristics/fallbacks."""
     def __init__(self, model: str = "gpt-4.1-mini", timeout: float = 180.0):
-        self.client = OpenAI(api_key = "[REDACTED_OPENAI_KEY]", timeout=timeout)
+        self.client = OpenAI(api_key = "", timeout=timeout)
         self.model = model
 
         prompt_path = os.path.join(os.path.dirname(__file__), "../prompts/system_semantic_safety.md")
