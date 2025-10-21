@@ -1,0 +1,5 @@
+.env
+*.env
+cbf_extracted/config/openai_key.txt
+__pycache__/
+*.pyc
