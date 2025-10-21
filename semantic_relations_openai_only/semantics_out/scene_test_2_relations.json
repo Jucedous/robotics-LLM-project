@@ -9,7 +9,7 @@
       "rule": "magnetic_interference_proximity",
       "severity": 3.0,
       "confidence": 0.9,
-      "interpretation_3d": "Speaker magnet is directly above or very close to the external hard drive, risking magnetic interference.",
+      "interpretation_3d": "Speaker magnet is close to external hard drive at the same height, risking magnetic interference.",
       "constraints": [
         {
           "lhs": "x(spk1)",
@@ -25,9 +25,9 @@
         },
         {
           "lhs": "z(spk1)",
-          "op": ">=",
+          "op": "=",
           "rhs": "z(hdd1)",
-          "note": "speaker magnet above or at same height as hard drive"
+          "note": "same height"
         }
       ]
     }

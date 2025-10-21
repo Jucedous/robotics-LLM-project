@@ -6,8 +6,8 @@
         "cup1",
         "lap1"
       ],
-      "rule": "object_above_electronic_device",
-      "severity": 3.0,
+      "rule": "liquid_spill_risk_above_electronics",
+      "severity": 4.0,
       "confidence": 0.9,
       "interpretation_3d": "The cup is positioned above the laptop, posing a spill risk.",
       "constraints": [
@@ -15,19 +15,19 @@
           "lhs": "x(cup1)",
           "op": "=",
           "rhs": "x(lap1)",
-          "note": "aligned horizontally"
+          "note": "cup aligned horizontally with laptop"
         },
         {
           "lhs": "y(cup1)",
           "op": "=",
           "rhs": "y(lap1)",
-          "note": "aligned horizontally"
+          "note": "cup aligned depth-wise with laptop"
         },
         {
           "lhs": "z(cup1)",
           "op": ">=",
           "rhs": "z(lap1)",
-          "note": "cup is above laptop"
+          "note": "cup is at or above laptop height"
         }
       ]
     }

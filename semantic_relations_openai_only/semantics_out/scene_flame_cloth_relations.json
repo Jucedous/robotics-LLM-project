@@ -6,28 +6,28 @@
         "fl1",
         "cl1"
       ],
-      "rule": "open_flame_near_flammable_cloth",
-      "severity": 4.5,
-      "confidence": 0.85,
-      "interpretation_3d": "Flame adjacent to cloth at similar height risks ignition.",
+      "rule": "flammable_material_near_flame",
+      "severity": 4.0,
+      "confidence": 0.9,
+      "interpretation_3d": "The candle flame is directly above the cotton cloth, posing a fire hazard.",
       "constraints": [
-        {
-          "lhs": "z(fl1)",
-          "op": "=",
-          "rhs": "z(cl1)",
-          "note": "same height"
-        },
         {
           "lhs": "x(fl1)",
           "op": "=",
           "rhs": "x(cl1)",
-          "note": "canonical adjacency x"
+          "note": "aligned horizontally"
         },
         {
           "lhs": "y(fl1)",
           "op": "=",
           "rhs": "y(cl1)",
-          "note": "canonical adjacency y"
+          "note": "aligned horizontally"
+        },
+        {
+          "lhs": "z(fl1)",
+          "op": ">=",
+          "rhs": "z(cl1)",
+          "note": "flame above cloth"
         }
       ]
     }

@@ -6,9 +6,9 @@
         "can1",
         "st1"
       ],
-      "rule": "flammable_object_above_flame",
+      "rule": "flammable_object_near_open_flame",
       "severity": 5.0,
-      "confidence": 0.9,
+      "confidence": 1.0,
       "interpretation_3d": "The aerosol spray can is positioned above or at the same level as the gas stove flame, posing a fire hazard.",
       "constraints": [
         {

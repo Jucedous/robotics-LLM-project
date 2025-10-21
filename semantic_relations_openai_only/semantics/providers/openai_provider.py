@@ -16,7 +16,6 @@ class OpenAIProvider:
         self.client = OpenAI(api_key = "[REDACTED_OPENAI_KEY]", timeout=timeout)
         self.model = model
 
-        # Load external system prompt
         prompt_path = os.path.join(os.path.dirname(__file__), "../prompts/system_semantic_safety.md")
         with open(prompt_path, "r", encoding="utf-8") as f:
             self.system = f.read()
