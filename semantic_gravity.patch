@@ -1,0 +1,135 @@
+--- a/cbf/cbf_safety_metrics_llm.py+++ b/cbf/cbf_safety_metrics_llm.py@@ -72,6 +72,65 @@         labeled_pairs.add((A_name, B_name))
+         labeled_pairs.add((B_name, A_name))
+ 
++        # --- BEGIN semantic gravity add-ons (vertical + cone + critical) ---
++        # Recognize hazardous relations purely from kinds (LLM labels are optional)
++        LIQUID_KINDS      = { "liquid","water","drink","coffee","tea","beverage","juice","cup","mug","glass" }
++        ELECTRONIC_KINDS  = { "electronic","laptop","phone","tablet","camera","router","charger","console","keyboard","pc" }
++        SHARP_KINDS       = { "sharp","knife","scissors","blade","cutter","boxcutter" }
++        HUMAN_KINDS       = { "human","person","hand","arm","finger","operator" }
++        relation = None
++        if A_kind.strip().lower() in LIQUID_KINDS and B_kind.strip().lower() in ELECTRONIC_KINDS:
++            relation = "spill"
++        elif A_kind.strip().lower() in SHARP_KINDS and B_kind.strip().lower() in HUMAN_KINDS:
++            relation = "cut"
++
++        if relation is not None:
++            # Only apply gravity semantics if A is above B
++            dz = float(A.sphere.center[2] - B.sphere.center[2])
++            if dz > 0.0:
++                # knobs (conservative defaults)
++                gravity_z_margin_m  = 0.05   # vertical buffer before 'overhead' starts penalizing
++                gravity_cone_base_m = 0.03   # baseline footprint at dz=0
++                gravity_cone_slope  = 0.60   # horizontal growth per 1 m height (≈31° cone)
++                gravity_xy_cap_m    = 1.50   # skip cone beyond this XY for performance
++                vertical_w_scale    = 0.35   # × rule weight
++                cone_w_scale        = 0.50   # × rule weight
++
++                Ax, Ay = float(A.sphere.center[0]), float(A.sphere.center[1])
++                Bx, By = float(B.sphere.center[0]), float(B.sphere.center[1])
++                Br     = float(B.sphere.radius)
++                xy = float(np.linalg.norm([Ax-Bx, Ay-By]))
++
++                # (a) Vertical-order penalty (graded)
++                h_vert = (B.sphere.center[2] + gravity_z_margin_m) - A.sphere.center[2]  # safe if >= 0
++                risk_vert = sigmoid_stable(-(h_vert) / max(scale_res, 1e-6) * alpha_gain)
++                metrics.append({
++                    "name": f"{A.name}->{B.name} [{relation} vertical]",
++                    "risk": float(risk_vert),
++                    "weight": float(vertical_w_scale * weight),
++                    "channel": "semantic-vertical",
++                    "diagnostic_only": False,
++                })
++
++                # (b) Spill/Fall cone footprint (graded)
++                allow = Br + gravity_cone_base_m + gravity_cone_slope * dz
++                if xy <= gravity_xy_cap_m:
++                    spill_res = xy - allow  # safe if >= 0
++                    risk_cone = sigmoid_stable(-(spill_res) / max(scale_res, 1e-6) * alpha_gain)
++                    metrics.append({
++                        "name": f"{A.name}->{B.name} [{relation} cone]",
++                        "risk": float(risk_cone),
++                        "weight": float(cone_w_scale * weight),
++                        "channel": "semantic-gravity",
++                        "diagnostic_only": False,
++                    })
++
++                # (c) Hard-fail when inside the cone
++                if xy < allow:
++                    critical_violation = True
++                    critical_pairs.append({"A": A.name, "B": B.name, "predicate": f"{relation}-cone"})
++        # --- END semantic gravity add-ons ---
++
+         checker = critical_by_pair.get((A_name, B_name))
+         if checker and checker(A.sphere, B.sphere):
+             critical_violation = True
+
+--- a/cbf/semantics_runtime.py+++ b/cbf/semantics_runtime.py@@ -178,23 +178,23 @@             ))
+     return feats
+ 
+-_PAIR_SYSTEM_PROMPT = """You are a safety analyst for object-only manipulation scenes.
+-
++_PAIR_SYSTEM_PROMPT = """
++You are assessing hazards between two spherical objects A and B in a scene.
+ You will receive a list of candidate object pairs with precomputed features.
+-For EACH candidate pair, decide whether the pair is a **SEMANTICALLY HAZARDOUS CATEGORY** in general
++
++For EACH candidate pair, decide whether the pair is a SEMANTICALLY HAZARDOUS CATEGORY in general
+ (e.g., if the object types imply a plausible risk in typical settings), regardless of current spacing.
+ 
+ Return STRICT JSON:
+-
+ {
+   "assessments": [
+     {
+       "A_name": "<string>",
+       "B_name": "<string>",
+-      "present": true | false,              // true = semantically hazardous category (independent of distance)
+-      "risk_type": "<short label or ''>",   // e.g., "spill", "cut", "crush", "heat", ...
+-      "weight": <number 0..inf>,            // semantic importance of this hazard category
+-      "soft_clearance_m": <number>,         // clearance margin the CBF should prefer (still geometric)
++      "present": true | false,
++      "risk_type": "collision" | "spill" | "cut" | "crush" | "heat" | "bio" | "other",
++      "weight": <float>,
++      "soft_clearance_m": <float>,
+       "critical_condition": {
+         "expression": "<boolean formula using ONLY Ax,Ay,Az,Ar,Bx,By,Bz,Br and funcs: abs,min,max,sqrt,norm,norm_xy,dot>"
+       } | null,
+@@ -205,14 +205,17 @@ 
+ IMPORTANT:
+ - `present` is about SEMANTIC hazard (category), NOT whether the pair is currently close.
+-- Even if far apart now, if the pair type is a plausible hazard in typical usage, set present=true and assign a reasonable weight and clearance.
+-- Use `critical_condition` ONLY for clear, geometry-based red lines (e.g., A above B within small gap or overlap).
++- Even if far apart now, if the pair type is a plausible hazard (e.g., liquid over electronics, knife over human), set present=true and assign a reasonable weight and clearance.
++- Use `critical_condition` ONLY for clear, geometry-based red lines.
++  For gravity-sensitive hazards (e.g., liquid->electronics, sharp->human), a typical red line is:
++    Az > Bz and norm_xy(Ax-Bx, Ay-By) < (Br + 0.03 + 0.60*(Az-Bz))
+ 
+ STRICT RULES:
+ - Decide per-pair; do not skip a pair silently. If no semantic hazard, set present=false, weight=0, soft_clearance_m=0.
+ - Expressions MUST use ONLY the allowed variables/functions (no custom names).
+ - No commentary outside JSON.
+ """
++
+ 
+ _PAIR_USER_PROMPT = """Scene objects:
+ {scene_json}
+
+--- a/examples/interactive_llm_app.py+++ b/examples/interactive_llm_app.py@@ -270,7 +270,7 @@             rules_lines.append(" • (stale; press Requery LLM)")
+ 
+         metrics = out.get("metrics", [])
+-        hazards = [m for m in metrics if m.get("channel") == "semantic"]
++        hazards = [m for m in metrics if str(m.get("channel")).startswith("semantic") and not m.get("diagnostic_only", False)]
+         collisions = [m for m in metrics if m.get("channel") == "collision" and not m.get("diagnostic_only", False)]
+         collisions_visual = [m for m in metrics if m.get("channel") == "collision" and m.get("diagnostic_only", False)]
+ 
+@@ -290,7 +290,8 @@ 
+         summary = (
+             f"residual_min: {out.get('residual_min', float('inf')):.3f}\n"
+-            f"composite_risk: {out.get('composite_risk', 0.0):.3g}"
++            f"composite_risk: {out.get('composite_risk', 0.0):.3g}\n"
++            f"critical_violation: {out.get('critical_violation', False)}"
+         )
+ 
+         text = "\n".join(
+
