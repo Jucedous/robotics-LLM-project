@@ -10,18 +10,12 @@ def metric_hazard_pairings_cbf_objects_llm(
     alpha_gain: float = 5.0,
     scale_res: float = 0.05,
     rules: List[Tuple[str, str, float, float, str, str]] = [],
-    #          A_kind   B_kind   clearance  weight   A_name  B_name
     critical_by_pair: Optional[Dict[Tuple[str, str], Callable[[Sphere, Sphere], bool]]] = None,
-    # --- Generic collision baseline over all pairs (rules‑free)
     include_collision_baseline: bool = True,
     baseline_weight: float = 0.25,
     baseline_clearance_m: float = 0.0,
-    # --- NEW: also show collision for LLM‑labeled pairs
-    # If True, we add an extra "(collision)" line for those pairs as a *visual* term.
-    # Set collision_visual_only=False if you *want* it counted in the aggregate (additive).
     show_collision_for_labeled_pairs: bool = False,
     collision_visual_only: bool = True,
-    # --- Optional: append a tag to the semantic metric names for clarity
     label_semantic_entries: bool = True,
 ) -> Dict:
     """
@@ -49,7 +43,6 @@ def metric_hazard_pairings_cbf_objects_llm(
         x = float(np.clip(x, -60.0, 60.0))
         return 1.0 / (1.0 + np.exp(-x))
 
-    # ---- 1) SEMANTIC (LLM) RISKS ------------------------------------------
     labeled_pairs = set()
     for A_kind, B_kind, safe_clearance, weight, A_name, B_name in rules:
         A = by_name.get(A_name); B = by_name.get(B_name)
@@ -66,7 +59,7 @@ def metric_hazard_pairings_cbf_objects_llm(
             "risk": float(risk),
             "weight": float(weight),
             "channel": "semantic",
-            "diagnostic_only": False,  # counted in aggregate
+            "diagnostic_only": False,
         })
 
         labeled_pairs.add((A_name, B_name))
@@ -77,15 +70,12 @@ def metric_hazard_pairings_cbf_objects_llm(
             critical_violation = True
             critical_pairs.append({"A": A.name, "B": B.name, "predicate": "critical"})
 
-    # ---- 2) COLLISION BASELINE --------------------------------------------
-    # Unlabeled pairs (always added if baseline enabled)
     if include_collision_baseline and len(objects) >= 2 and baseline_weight > 0.0:
         N = len(objects)
         for i in range(N):
             Ai = objects[i]
             for j in range(i + 1, N):
                 Bj = objects[j]
-                # If this pair has no semantic rule, add baseline as an aggregating term
                 if (Ai.name, Bj.name) not in labeled_pairs and (Bj.name, Ai.name) not in labeled_pairs:
                     res = residual_for_pair(Ai, Bj, baseline_clearance_m)
                     resmins.append(res)
@@ -95,12 +85,10 @@ def metric_hazard_pairings_cbf_objects_llm(
                         "risk": float(risk),
                         "weight": float(baseline_weight),
                         "channel": "collision",
-                        "diagnostic_only": False,  # counted in aggregate
+                        "diagnostic_only": False,
                     })
 
-    # Labeled pairs (optional extra collision line, visual or additive)
     if show_collision_for_labeled_pairs and len(objects) >= 2 and baseline_weight > 0.0:
-        # Use the same baseline_clearance_m and weight as above
         seen = set()
         for (A_name, B_name) in labeled_pairs:
             if (B_name, A_name) in seen:
@@ -118,11 +106,9 @@ def metric_hazard_pairings_cbf_objects_llm(
                 "risk": float(risk),
                 "weight": float(baseline_weight),
                 "channel": "collision",
-                # If visual-only, the line is displayed but excluded from aggregate
                 "diagnostic_only": bool(collision_visual_only),
             })
 
-    # ---- Aggregate (exclude diagnostic-only entries) -----------------------
     score_sum, wsum = 0.0, 0.0
     for m in metrics:
         if m.get("diagnostic_only", False):
