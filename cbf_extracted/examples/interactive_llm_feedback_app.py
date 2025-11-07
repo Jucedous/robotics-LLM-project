@@ -22,7 +22,7 @@ from cbf.tools.ui_helpers import DraggableCircle, set_arena_bounds
 
 from cbf.preferences import PreferenceStore
 from cbf.feedback_pipeline import label_and_store_feedback
-
+from cbf.explanations import attach_explanations_to_hazards  # <-- added
 
 def load_scene(path: str):
     items = json.loads(Path(path).read_text())
@@ -131,6 +131,7 @@ class InteractiveLLMApp:
         self.scene_version = 0
         self.rules_version = -1
         self._last_out = None
+        self._explain_map = {}  # <-- added
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             keyfile = _ROOT / "config" / "openai_key.txt"
@@ -202,6 +203,32 @@ class InteractiveLLMApp:
         self.rules, self.crit_map = enforce_user_preferences_on_instantiated_rules(
             self.objects, self.rules, self.crit_map, user_rules
         )
+        # --- explanations hook: build and cache a short "why" per active pair
+        if os.getenv("EXPLAIN_AUTO", "1") != "0":
+            hazards_for_expl = [
+                {"selectors": {"A": {"by": "name", "value": Aname},
+                               "B": {"by": "name", "value": Bname}}}
+                for (_Ak, _Bk, _clr, _w, Aname, Bname) in self.rules
+            ]
+            try:
+                only_present = os.getenv("EXPLAIN_ONLY_PRESENT", "1") != "0"
+                enriched = attach_explanations_to_hazards(
+                    hazards=hazards_for_expl,
+                    objects=self.objects,
+                    cfg=self.cfg,
+                    only_present=only_present
+                )
+                self._explain_map = {}
+                for h in enriched:
+                    sel = h.get("selectors", {})
+                    a = ((sel.get("A") or {}).get("value") or "").strip()
+                    b = ((sel.get("B") or {}).get("value") or "").strip()
+                    ex = (h.get("explanation") or "").strip()
+                    if a and b and ex:
+                        self._explain_map[(a, b)] = ex
+            except Exception as e:
+                print(f"[Explain] failed: {e}")
+                self._explain_map = {}
 
     def _compute_safety_now(self):
         return metric_hazard_pairings_cbf_objects_llm(
@@ -325,6 +352,10 @@ class InteractiveLLMApp:
             else:
                 for (Ak,Bk,clr,w,Aname,Bname) in self.rules:
                     rules_lines.append(f" • {Aname}({Ak}) → {Bname}({Bk}) | clr={clr:.3f}m, w={w:.2f}")
+                    if os.getenv("EXPLAIN_SHOW", "1") != "0":
+                        ex = self._explain_map.get((Aname, Bname))
+                        if ex:
+                            rules_lines.append(f"    why: {ex}")
         else:
             rules_lines.append(" • (stale; press Requery LLM)")
         metrics = out.get("metrics", [])

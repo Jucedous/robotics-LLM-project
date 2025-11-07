@@ -289,10 +289,6 @@ def metric_hazard_pairings_cbf_objects(
     }
 
 
-# -------------------------
-# Top-level aggregation
-# -------------------------
-
 def evaluate_scene_metrics(scene: Scene) -> Dict:
     """
     Compute CBF-based safety metrics for an object-only scene and a composite score.

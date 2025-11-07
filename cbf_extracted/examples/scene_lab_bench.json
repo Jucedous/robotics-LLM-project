@@ -1,0 +1,194 @@
+[
+  {
+    "name": "bleach",
+    "xy": [
+      -0.8,
+      0.6
+    ],
+    "z": 0.1,
+    "r": 0.06,
+    "tags": [
+      "cleaner",
+      "oxidizer",
+      "chlorine"
+    ]
+  },
+  {
+    "name": "ammonia",
+    "xy": [
+      -0.65,
+      0.55
+    ],
+    "z": 0.1,
+    "r": 0.06,
+    "tags": [
+      "cleaner",
+      "base",
+      "ammonia"
+    ]
+  },
+  {
+    "name": "vinegar",
+    "xy": [
+      -0.55,
+      0.4
+    ],
+    "z": 0.1,
+    "r": 0.05,
+    "tags": [
+      "acid"
+    ]
+  },
+  {
+    "name": "hydrogen peroxide 30%",
+    "xy": [
+      -0.8,
+      0.35
+    ],
+    "z": 0.2,
+    "r": 0.06,
+    "tags": [
+      "oxidizer"
+    ]
+  },
+  {
+    "name": "isopropyl alcohol 99%",
+    "xy": [
+      -0.4,
+      0.6
+    ],
+    "z": 0.1,
+    "r": 0.06,
+    "tags": [
+      "solvent",
+      "flammable"
+    ]
+  },
+  {
+    "name": "lithium battery pack",
+    "xy": [
+      -0.2,
+      0.55
+    ],
+    "z": 0.1,
+    "r": 0.07,
+    "tags": [
+      "battery",
+      "lithium"
+    ]
+  },
+  {
+    "name": "soldering iron (on)",
+    "xy": [
+      -0.1,
+      0.35
+    ],
+    "z": 0.15,
+    "r": 0.05,
+    "tags": [
+      "hot",
+      "heater"
+    ]
+  },
+  {
+    "name": "paper towel roll",
+    "xy": [
+      -0.25,
+      0.3
+    ],
+    "z": 0.1,
+    "r": 0.06,
+    "tags": [
+      "paper",
+      "combustible"
+    ]
+  },
+  {
+    "name": "bunsen burner (flame)",
+    "xy": [
+      0.0,
+      0.6
+    ],
+    "z": 0.2,
+    "r": 0.05,
+    "tags": [
+      "flame",
+      "hot"
+    ]
+  },
+  {
+    "name": "oxygen cylinder",
+    "xy": [
+      0.1,
+      0.3
+    ],
+    "z": 0.0,
+    "r": 0.09,
+    "tags": [
+      "compressed_gas",
+      "oxidizer"
+    ]
+  },
+  {
+    "name": "acetone",
+    "xy": [
+      0.35,
+      0.55
+    ],
+    "z": 0.1,
+    "r": 0.06,
+    "tags": [
+      "solvent",
+      "flammable"
+    ]
+  },
+  {
+    "name": "petri dish (ethanol)",
+    "xy": [
+      0.5,
+      0.4
+    ],
+    "z": 0.1,
+    "r": 0.05,
+    "tags": [
+      "flammable"
+    ]
+  },
+  {
+    "name": "water beaker",
+    "xy": [
+      0.6,
+      0.65
+    ],
+    "z": 0.1,
+    "r": 0.05,
+    "tags": [
+      "water"
+    ]
+  },
+  {
+    "name": "power strip",
+    "xy": [
+      0.8,
+      0.55
+    ],
+    "z": 0.0,
+    "r": 0.07,
+    "tags": [
+      "electronics"
+    ]
+  },
+  {
+    "name": "laptop",
+    "xy": [
+      0.8,
+      0.35
+    ],
+    "z": 0.1,
+    "r": 0.08,
+    "tags": [
+      "electronics",
+      "computer"
+    ]
+  }
+]
