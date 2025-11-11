@@ -1,28 +1,3 @@
-"""
-CBF-based safety metrics for object-only manipulation scenes (no robot).
-
-Updates (Sep 2025)
-------------------
-• Object-only rewrite (NumPy-only dependency).
-• Critical hazard override expanded: liquid–electronics **overlap OR 'over-within-gap'**
-  (liquid horizontally above electronics within a small XY footprint and limited Z-gap)
-  forces composite_risk = 1.0 and safety score = 0.0. Tunable thresholds.
-• Workspace CBF now accounts for object radii (spheres stay fully inside the AABB).
-• Stable sigmoid to avoid overflow. Dedup objects when using tags as aliases.
-
-Safety score reported as 0–5 (0 = very unsafe, 5 = very safe).
-
-Core idea
----------
-For each safety aspect, define a Control Barrier Function (CBF) h(x) ≥ 0 that encodes
-forward-invariance of a safe set S = {x | h(x) ≥ 0}. Given state x and (optionally) xdot:
-  • Safety margin:                   h(x)
-  • CBF residual:                    ẋh(x) + α·h(x)   (should be ≥ 0)
-  • Risk in [0, 1]:                  σ(−(h/scale)) and/or σ(−(residual/scale))
-
-Call `evaluate_scene_metrics(scene)` to get per-metric reports and a composite score.
-"""
-
 from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
@@ -46,10 +21,6 @@ def safe_norm(v: np.ndarray, eps: float = 1e-12) -> float:
 def clamp(x: float, lo: float, hi: float) -> float:
     return max(lo, min(x, hi))
 
-# -------------------------
-# Scene & state containers
-# -------------------------
-
 @dataclass
 class Sphere:
     center: np.ndarray
@@ -72,11 +43,6 @@ class Scene:
     objects: List[ObjectState]
     workspace: Optional[Workspace] = None
 
-
-# -------------------------
-# CBF primitives (distance-based)
-# -------------------------
-
 def pairwise_distance_cbf(A: Sphere, B: Sphere, buffer: float = 0.0) -> float:
     """h(x) = d^2 - (rA + rB + buffer)^2 ≥ 0 is safe (squared-distance form)."""
     delta = A.center - B.center
@@ -95,11 +61,6 @@ def pairwise_dhdt(
 
 def alpha_linear(h: float, k: float = 1.0) -> float:
     return k * h
-
-
-# -------------------------
-# Object-only metrics
-# -------------------------
 
 def metric_object_collision_cbf(
     objects: List[ObjectState],
@@ -162,16 +123,16 @@ def metric_workspace_cbf_objects(
         v = obj.velocity
 
         h_axes = [
-            float((x[0] - r) - bounds[0, 0]),  # xmin
-            float(bounds[0, 1] - (x[0] + r)),  # xmax
-            float((x[1] - r) - bounds[1, 0]),  # ymin
-            float(bounds[1, 1] - (x[1] + r)),  # ymax
-            float((x[2] - r) - bounds[2, 0]),  # zmin
-            float(bounds[2, 1] - (x[2] + r)),  # zmax
+            float((x[0] - r) - bounds[0, 0]),
+            float(bounds[0, 1] - (x[0] + r)),
+            float((x[1] - r) - bounds[1, 0]),
+            float(bounds[1, 1] - (x[1] + r)),
+            float((x[2] - r) - bounds[2, 0]), 
+            float(bounds[2, 1] - (x[2] + r)), 
         ]
         idx = int(np.argmin(h_axes))
         h = h_axes[idx]
-        if idx == 0:   dh = float(v[0])       # moving -x shrinks (x - r) - xmin → but sign is handled by α(h)
+        if idx == 0:   dh = float(v[0])
         elif idx == 1: dh = float(-v[0])
         elif idx == 2: dh = float(v[1])
         elif idx == 3: dh = float(-v[1])
@@ -204,8 +165,8 @@ def metric_hazard_pairings_cbf_objects(
     alpha_gain: float = 5.0,
     scale_res: float = 0.05,
     treat_liquid_above_electronics_as_critical: bool = True,
-    xy_margin: float = 0.05,     # extra horizontal tolerance in meters
-    z_gap_max: float = 0.25,     # if liquid is above within this vertical gap, treat as critical
+    xy_margin: float = 0.05,
+    z_gap_max: float = 0.25,
 ) -> Dict:
     """
     Domain-specific hazard CBFs for risky object–object pairings (liquid–electronics, sharp–human, etc.).

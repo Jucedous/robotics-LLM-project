@@ -144,12 +144,20 @@ def _post_openai_chat_json(cfg: Any, system_prompt: str, user_prompt: str) -> Di
     return json.loads(content)
 
 _CHAT_SYSTEM = (
-    "Return ONLY a single JSON object with keys:\n"
+    "You convert user preferences into a single JSON object with keys:\n"
     '  "present": true or false\n'
     '  "pairs": [ { "A": {"text": string}, "B": {"text": string} } ]\n'
-    "Decide from the sentence whether the relation between A and B is dangerous (present=true) or not (present=false).\n"
-    "Use the user words to extract A and B as names or kinds that exist in the provided list."
+    "\n"
+    "INTERPRETATION RULES:\n"
+    "- Treat the user's sentence as a NORMATIVE OVERRIDE, not a factual claim.\n"
+    "- If the user says the relation is allowed/safe/not dangerous/OK together => present=false.\n"
+    "- If the user says the relation is dangerous/avoid/prohibit/not allowed together => present=true.\n"
+    "- Respect explicit negation words (e.g., 'not', 'should not', 'no', 'never').\n"
+    "- Do NOT use outside world knowledge to flip the user's intent.\n"
+    "\n"
+    "Return ONLY the JSON."
 )
+
 
 _CHAT_USER_TEMPLATE = (
     "User feedback:\n{feedback}\n\n"

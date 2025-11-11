@@ -1,14 +1,9 @@
-import sys, os, json, re, getpass
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from __future__ import annotations
+import os, getpass
+from typing import Any, Dict, List, Tuple, Optional
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
-
-_THIS = Path(__file__).resolve()
-_ROOT = _THIS.parents[1]
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
 
 from cbf.semantics_runtime import (
     LLMConfig,
@@ -19,109 +14,12 @@ from cbf.semantics_runtime import (
 from cbf.cbf_safety_metrics_llm import metric_hazard_pairings_cbf_objects_llm
 from cbf.cbf_safety_metrics import ObjectState, Sphere
 from cbf.tools.ui_helpers import DraggableCircle, set_arena_bounds
-
 from cbf.preferences import PreferenceStore
 from cbf.feedback_pipeline import label_and_store_feedback
-from cbf.explanations import attach_explanations_to_hazards  # <-- added
+from cbf.explanations import attach_explanations_to_hazards
 
-def load_scene(path: str):
-    items = json.loads(Path(path).read_text())
-    objs = []
-    for it in items:
-        x, y = it.get("xy", [0.0, 0.0]); z = it.get("z", 0.0); r = float(it.get("r", 0.05))
-        objs.append(ObjectState(
-            name=str(it["name"]),
-            kind=str(it.get("kind", "object")).strip(),
-            sphere=Sphere(center=np.array([x, y, z], dtype=float), radius=r),
-            tags=tuple(it.get("tags", [])),
-        ))
-    return objs
-
-def to_llm_payload(objs):
-    return [
-        dict(
-            name=o.name, kind=o.kind, tags=list(o.tags),
-            xyz=[float(o.sphere.center[0]), float(o.sphere.center[1]), float(o.sphere.center[2])],
-            r=float(o.sphere.radius)
-        )
-        for o in objs
-    ]
-
-
-def _match_selector(obj: ObjectState, sel: Dict[str, str]) -> bool:
-    by, val = sel.get("by"), sel.get("value")
-    if by == "kind": return obj.kind == val
-    if by == "name": return obj.name == val
-    if by == "tag":  return val in obj.tags
-    return False
-
-def _cond_ok(expr: Optional[str], A: ObjectState, B: ObjectState) -> bool:
-    if not expr: return True
-    Az = float(A.sphere.center[2]); Bz = float(B.sphere.center[2])
-    if expr.strip() == "Az > Bz": return Az > Bz
-    if expr.strip() == "Az < Bz": return Az < Bz
-    return True
-
-def enforce_user_preferences_on_instantiated_rules(
-    objects: List[ObjectState],
-    rules: List[Tuple[str, str, float, float, str, str]],
-    critical_by_pair: Dict[Tuple[str, str], Any],
-    user_rules: List[Dict[str, Any]],
-) -> Tuple[List[Tuple[str, str, float, float, str, str]], Dict[Tuple[str, str], Any]]:
-    if not user_rules:
-        return rules, critical_by_pair
-    name2obj = {o.name: o for o in objects}
-    new_rules: List[Tuple[str, str, float, float, str, str]] = []
-    for (Ak, Bk, clr, w, Aname, Bname) in rules:
-        A, B = name2obj.get(Aname), name2obj.get(Bname)
-        if A is None or B is None:
-            new_rules.append((Ak,Bk,clr,w,Aname,Bname))
-            continue
-        drop = False; clr2, w2 = clr, w
-        for R in user_rules:
-            selA = R.get("selectors",{}).get("A"); selB = R.get("selectors",{}).get("B")
-            if not selA or not selB: continue
-            present = R.get("override",{}).get("present", None)
-            directional = bool(R.get("directional", False))
-            cond = R.get("condition_expr") or R.get("relation")
-            def applies(X,Y):
-                return _match_selector(X, selA) and _match_selector(Y, selB) and _cond_ok(cond, X, Y)
-            matched = applies(A,B) or (not directional and applies(B,A))
-            if not matched: continue
-            if present is False:
-                drop = True
-                if isinstance(critical_by_pair, dict):
-                    critical_by_pair.pop((Aname,Bname), None)
-                    critical_by_pair.pop((Bname,Aname), None)
-                break
-            elif present is True:
-                if "soft_clearance_m" in R.get("override", {}):
-                    clr2 = float(R["override"]["soft_clearance_m"])
-                if "weight" in R.get("override", {}):
-                    w2 = float(R["override"]["weight"])
-        if not drop:
-            new_rules.append((Ak,Bk,clr2,w2,Aname,Bname))
-    existing = {(Aname,Bname) for (_,_,_,_,Aname,Bname) in new_rules}
-    for R in user_rules:
-        if R.get("override",{}).get("present") is not True:
-            continue
-        selA = R.get("selectors",{}).get("A"); selB = R.get("selectors",{}).get("B")
-        if not selA or not selB: continue
-        directional = bool(R.get("directional", False))
-        cond = R.get("condition_expr") or R.get("relation")
-        clr_new = float(R.get("override",{}).get("soft_clearance_m", 0.0))
-        w_new   = float(R.get("override",{}).get("weight", 1.0))
-        for A in objects:
-            if not _match_selector(A, selA): continue
-            for B in objects:
-                if A is B: continue
-                if not _match_selector(B, selB): continue
-                if directional and not _cond_ok(cond, A, B): continue
-                if (A.name, B.name) not in existing:
-                    new_rules.append((A.kind, B.kind, clr_new, w_new, A.name, B.name))
-                    existing.add((A.name,B.name))
-    return new_rules, critical_by_pair
-
+from .scene_io import load_scene, to_llm_payload
+from .rules import enforce_user_preferences_on_instantiated_rules
 
 class InteractiveLLMApp:
     def __init__(self, scene_path: str):
@@ -371,15 +269,3 @@ class InteractiveLLMApp:
         text = "\n".join(rules_lines + [""] + lines + ["", summary])
         self.ax_info.text(0.02, 0.98, text, ha="left", va="top", family="monospace", fontsize=9)
         self.fig.canvas.draw_idle()
-
-
-def main(scene_path: str):
-    app = InteractiveLLMApp(scene_path)
-    plt.show(block=True)
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="Interactive LLM safety (with LLM-based feedback pipeline)")
-    parser.add_argument("scene", nargs="?", default=str(_THIS.parent / "scene1.json"))
-    args = parser.parse_args()
-    main(args.scene)
