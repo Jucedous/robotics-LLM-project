@@ -16,11 +16,55 @@
       "relation": null,
       "condition_expr": null,
       "override": {
+        "present": true
+      },
+      "reason": "knife and human should not be dangerous",
+      "id": "54c0f87f-016f-41c8-bcc0-6cf0fd2e56ea",
+      "created_at": "2025-11-20T22:38:35Z"
+    },
+    {
+      "user_id": "zilinzhao",
+      "selectors": {
+        "A": {
+          "by": "name",
+          "value": "kid"
+        },
+        "B": {
+          "by": "name",
+          "value": "blade"
+        }
+      },
+      "directional": false,
+      "relation": null,
+      "condition_expr": null,
+      "override": {
         "present": false
       },
-      "reason": "knife and human are not dangerous together",
-      "id": "4b09a3a1-3096-49b0-9ad4-6fab9918e517",
-      "created_at": "2025-11-11T21:33:08Z"
+      "reason": "kid and blade are not dangerous",
+      "id": "017ca972-6d96-479d-a70a-ff1e4d14cd05",
+      "created_at": "2025-11-20T22:39:21Z"
+    },
+    {
+      "user_id": "zilinzhao",
+      "selectors": {
+        "A": {
+          "by": "name",
+          "value": "blade"
+        },
+        "B": {
+          "by": "name",
+          "value": "camera"
+        }
+      },
+      "directional": false,
+      "relation": null,
+      "condition_expr": null,
+      "override": {
+        "present": false
+      },
+      "reason": "blade and camera are not dangerous",
+      "id": "515f479b-200f-49ea-a52b-114e27d55a5f",
+      "created_at": "2025-11-20T22:40:22Z"
     }
   ]
 }
