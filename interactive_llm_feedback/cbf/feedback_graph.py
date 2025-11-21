@@ -16,12 +16,9 @@ class FeedbackEdge:
     a: str
     b: str
     kinds: Set[EdgeKind] = field(default_factory=set)
-    # Only meaningful when "dangerous" is in kinds:
     soft_clearance_m: Optional[float] = None
     weight: Optional[float] = None
-    # Only meaningful when "similar" is in kinds:
     similarity_score: Optional[float] = None
-    # IDs of preference rules that contributed to this edge.
     rule_ids: Set[str] = field(default_factory=set)
 
 
@@ -29,7 +26,6 @@ class FeedbackEdge:
 class FeedbackGraph:
     """Graph over concepts appearing in user feedback rules."""
     nodes: Set[str] = field(default_factory=set)
-    # key is (min(a, b), max(a, b))
     edges: Dict[Tuple[str, str], FeedbackEdge] = field(default_factory=dict)
 
     def _key(self, a: str, b: str) -> Tuple[str, str]:

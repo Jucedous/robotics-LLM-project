@@ -3,10 +3,6 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional
 import numpy as np
 
-# -------------------------
-# Utility math helpers
-# -------------------------
-
 def sigmoid_stable(x: np.ndarray | float) -> np.ndarray | float:
     if isinstance(x, np.ndarray):
         x = np.clip(x, -60.0, 60.0)

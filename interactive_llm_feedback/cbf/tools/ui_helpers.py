@@ -6,7 +6,6 @@ from matplotlib.patches import Circle
 
 from cbf.cbf_safety_metrics import ObjectState, Sphere
 
-# Try to use styling from tools; otherwise fallback to a default theme.
 try:
     from cbf.tools.ui_theme import DEFAULT_OBJECT_STYLE
 except Exception:
