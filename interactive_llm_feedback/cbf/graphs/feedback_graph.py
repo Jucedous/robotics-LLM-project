@@ -4,7 +4,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Tuple, Set, Optional, Literal
 
-from cbf.semantics_runtime import LLMConfig, _post_openai
+from services.llm import LLMConfig, post_chat_json_messages
 
 
 EdgeKind = Literal["dangerous", "not_dangerous", "similar"]
@@ -12,7 +12,6 @@ EdgeKind = Literal["dangerous", "not_dangerous", "similar"]
 
 @dataclass
 class FeedbackEdge:
-    """One undirected edge in the user feedback graph."""
     a: str
     b: str
     kinds: Set[EdgeKind] = field(default_factory=set)
@@ -24,7 +23,6 @@ class FeedbackEdge:
 
 @dataclass
 class FeedbackGraph:
-    """Graph over concepts appearing in user feedback rules."""
     nodes: Set[str] = field(default_factory=set)
     edges: Dict[Tuple[str, str], FeedbackEdge] = field(default_factory=dict)
 
@@ -44,11 +42,6 @@ class FeedbackGraph:
         soft_clearance_m: Optional[float] = None,
         weight: Optional[float] = None,
     ) -> None:
-        """
-        Add or update an edge derived from a user rule.
-        - dangerous=True   => "dangerous" edge, with optional clearance/weight
-        - dangerous=False  => "not_dangerous" edge
-        """
         self.add_node(a)
         self.add_node(b)
         key = self._key(a, b)
@@ -83,7 +76,6 @@ class FeedbackGraph:
         *,
         similarity_score: float,
     ) -> None:
-        """Add or update a similarity edge between two concepts."""
         self.add_node(a)
         self.add_node(b)
         key = self._key(a, b)
@@ -98,7 +90,6 @@ class FeedbackGraph:
 
 
 def _canonical_concept(text: str) -> str:
-    """Normalize a concept label for node identity."""
     return " ".join((text or "").strip().lower().split())
 
 
@@ -118,12 +109,6 @@ _SIMILARITY_THRESHOLD = 0.7
 
 
 def _llm_similarity_pairs(concepts: List[str], cfg: LLMConfig) -> List[Dict[str, Any]]:
-    """
-    Ask the LLM which concept pairs are semantically similar.
-
-    Returns:
-        A list of dicts with keys {"a", "b", "score"}.
-    """
     if len(concepts) < 2:
         return []
 
@@ -133,7 +118,7 @@ def _llm_similarity_pairs(concepts: List[str], cfg: LLMConfig) -> List[Dict[str,
         {"role": "user", "content": json.dumps(payload)},
     ]
     try:
-        data = _post_openai(cfg, messages) or {}
+        data = post_chat_json_messages(cfg, messages) or {}
     except Exception as e:
         print(f"[FeedbackGraph] similarity LLM call failed: {e}")
         return []
@@ -164,15 +149,6 @@ def build_feedback_graph_from_rules(
     user_rules: List[Dict[str, Any]],
     cfg: LLMConfig,
 ) -> FeedbackGraph:
-    """
-    Build a FeedbackGraph from the stored user preference rules.
-
-    This:
-    - Creates nodes for each concept referenced in selectors A/B.
-    - Adds "dangerous" / "not_dangerous" edges based on override.present.
-    - Calls the LLM once to infer "similar" edges between concepts,
-      using a fixed similarity threshold.
-    """
     graph = FeedbackGraph()
 
     for rule in user_rules:

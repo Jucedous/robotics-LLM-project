@@ -7,7 +7,7 @@ from matplotlib.patches import Circle
 from cbf.cbf_safety_metrics import ObjectState, Sphere
 
 try:
-    from cbf.tools.ui_theme import DEFAULT_OBJECT_STYLE
+    from .ui_theme import DEFAULT_OBJECT_STYLE
 except Exception:
     DEFAULT_OBJECT_STYLE = {
         "object": dict(ec="black", lw=1.5, fc=(0.88, 0.88, 0.95), alpha=0.9)
@@ -15,7 +15,6 @@ except Exception:
 
 
 def style_for(obj: ObjectState):
-    """Return a matplotlib patch style dict for the object kind (fallback to 'object')."""
     return DEFAULT_OBJECT_STYLE.get(
         obj.kind,
         DEFAULT_OBJECT_STYLE.get("object", dict(ec="black", lw=1.5, fc=(0.88, 0.88, 0.95), alpha=0.9)),
@@ -23,7 +22,6 @@ def style_for(obj: ObjectState):
 
 
 def set_arena_bounds(ax: plt.Axes, objects: List[ObjectState]) -> None:
-    """Set nice XY limits around current objects, with padding."""
     if not objects:
         ax.set_xlim(-0.5, 0.5)
         ax.set_ylim(-0.5, 0.5)
@@ -37,10 +35,6 @@ def set_arena_bounds(ax: plt.Axes, objects: List[ObjectState]) -> None:
 
 
 class DraggableCircle:
-    """
-    A draggable circle that keeps a text label locked to its center and
-    calls 'on_change()' during drag & release (to recompute safety).
-    """
     def __init__(self, ax: plt.Axes, obj: ObjectState, on_change: Optional[Callable[[], None]] = None):
         self.ax = ax
         self.obj = obj
@@ -62,7 +56,6 @@ class DraggableCircle:
             fig.canvas.mpl_connect("motion_notify_event", self._on_motion),
         ]
 
-    # -------- events --------
     def _contains(self, event) -> bool:
         return bool(self.artist.contains(event)[0])
 
@@ -79,11 +72,9 @@ class DraggableCircle:
         dx, dy = event.xdata - xpress, event.ydata - ypress
         nx, ny = x0 + dx, y0 + dy
 
-        # visuals
         self.artist.center = (nx, ny)
         self.label.set_position((nx, ny))
 
-        # state (z unchanged)
         self.obj.sphere.center[0] = float(nx)
         self.obj.sphere.center[1] = float(ny)
 
@@ -99,7 +90,6 @@ class DraggableCircle:
             self.on_change()
         self.artist.figure.canvas.draw_idle()
 
-    # -------- helpers --------
     def set_position(self, x: float, y: float):
         self.artist.center = (float(x), float(y))
         self.label.set_position((float(x), float(y)))

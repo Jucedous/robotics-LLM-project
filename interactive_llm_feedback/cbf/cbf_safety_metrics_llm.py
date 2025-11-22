@@ -1,4 +1,3 @@
-# cbf/cbf_safety_metrics_llm.py
 from __future__ import annotations
 from typing import List, Dict, Tuple, Optional, Callable, Any
 import numpy as np
@@ -18,14 +17,6 @@ def metric_hazard_pairings_cbf_objects_llm(
     collision_visual_only: bool = True,
     label_semantic_entries: bool = True,
 ) -> Dict:
-    """
-    LLM-injected hazard CBFs + optional collision baseline.
-    - Semantic (LLM) pairs are *already* collision-based, using (rA+rB+soft_clearance).
-    - Baseline adds a small collision term for any pair (rA+rB), usually unlabeled pairs.
-    - Optionally, also *show* a baseline term for LLM-labeled pairs:
-        - visual-only (default): appears in metrics but is not counted (no double count)
-        - additive: counted in aggregate if collision_visual_only=False
-    """
     critical_by_pair = critical_by_pair or {}
 
     by_name = {o.name: o for o in objects}

@@ -40,7 +40,6 @@ class Scene:
     workspace: Optional[Workspace] = None
 
 def pairwise_distance_cbf(A: Sphere, B: Sphere, buffer: float = 0.0) -> float:
-    """h(x) = d^2 - (rA + rB + buffer)^2 ≥ 0 is safe (squared-distance form)."""
     delta = A.center - B.center
     d2 = float(np.dot(delta, delta))
     rsum = A.radius + B.radius + buffer
@@ -50,7 +49,6 @@ def pairwise_dhdt(
     A_center: np.ndarray, B_center: np.ndarray,
     vA: np.ndarray, vB: np.ndarray,
 ) -> float:
-    """Time derivative of h for the squared-distance barrier: ẋh = 2 (pA - pB)ᵀ (vA - vB)."""
     delta = A_center - B_center
     vrel = vA - vB
     return float(2.0 * np.dot(delta, vrel))
@@ -164,12 +162,6 @@ def metric_hazard_pairings_cbf_objects(
     xy_margin: float = 0.05,
     z_gap_max: float = 0.25,
 ) -> Dict:
-    """
-    Domain-specific hazard CBFs for risky object–object pairings (liquid–electronics, sharp–human, etc.).
-    Returns a **critical violation** flag if a liquid overlaps OR is directly above electronics within a small gap.
-
-    Risk (soft) is still computed via residual-based sigmoid for all pairs.
-    """
     rules = [
         ("liquid", "electronic", 0.15),
         ("sharp", "human", 0.10),
@@ -247,12 +239,6 @@ def metric_hazard_pairings_cbf_objects(
 
 
 def evaluate_scene_metrics(scene: Scene) -> Dict:
-    """
-    Compute CBF-based safety metrics for an object-only scene and a composite score.
-
-    Returns a dict with per-metric results and normalized scores in [0,1],
-    plus a 0–5 safety score (5=safe, 0=unsafe).
-    """
     m_collision = metric_object_collision_cbf(scene.objects)
     m_workspace = metric_workspace_cbf_objects(scene.objects, scene.workspace)
     m_hazard = metric_hazard_pairings_cbf_objects(scene.objects)

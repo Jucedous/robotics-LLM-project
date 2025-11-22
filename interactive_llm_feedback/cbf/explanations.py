@@ -1,32 +1,13 @@
-# cbf/explanations.py
 from __future__ import annotations
 import json, os, re
 from typing import Any, Dict, List, Tuple
 import requests
+from services.llm import post_chat_json_system_user
 
 def _cfg(cfg: Any, k: str, d=None):
     if cfg is None: return d
     if isinstance(cfg, dict): return cfg.get(k, d)
     return getattr(cfg, k, d)
-
-def _read_api_key(cfg: Any) -> str:
-    for env in ("OPENAI_API_KEY","OPENAI_APIKEY","OPENAI_TOKEN"):
-        v = os.getenv(env)
-        if v: return v.strip()
-    v = _cfg(cfg, "api_key")
-    if v: return v
-    try_paths = ["config/openai_key.txt","cbf/openai_key.txt"]
-    for p in try_paths:
-        try:
-            with open(p,"r",encoding="utf-8") as f:
-                t = f.read().strip()
-                if not t: continue
-                if "OPENAI_API_KEY" in t and "=" in t:
-                    return t.split("=",1)[1].strip().strip('"').strip("'")
-                return t
-        except Exception:
-            pass
-    raise RuntimeError("Missing OpenAI API key.")
 
 def _objects_summary(objs: List[Any]) -> List[Dict[str,str]]:
     out=[]
@@ -53,25 +34,6 @@ def hazard_pair_strings(h: Dict[str,Any]) -> Tuple[str,str]:
     if isinstance(pair,(list,tuple)) and len(pair)==2:
         A = str(pair[0]); B = str(pair[1]); return (A,B)
     return ("","")
-
-def _post_chat_json(cfg: Any, system: str, user: str) -> Dict[str,Any]:
-    api_key = _read_api_key(cfg)
-    url = _cfg(cfg,"api_url","https://api.openai.com/v1/chat/completions")
-    model = os.getenv("EXPLAIN_MODEL") or _cfg(cfg,"model","gpt-4o-mini")
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type":"application/json"}
-    body = {
-        "model": model,
-        "temperature": float(_cfg(cfg,"temperature",0.0)),
-        "response_format": {"type":"json_object"},
-        "messages": [
-            {"role":"system","content": system},
-            {"role":"user","content": user},
-        ],
-    }
-    r = requests.post(url, headers=headers, json=body, timeout=int(_cfg(cfg,"timeout_s",60)))
-    r.raise_for_status()
-    content = r.json()["choices"][0]["message"]["content"]
-    return json.loads(content)
 
 def _chunks(xs, n):
     for i in range(0, len(xs), n):
@@ -112,7 +74,7 @@ def attach_explanations_to_hazards(
             f"{json.dumps(batch, ensure_ascii=False)}\n"
         )
         try:
-            out = _post_chat_json(cfg, system, user)
+            out = post_chat_json_system_user(cfg, system, user, model_env="EXPLAIN_MODEL")
             for it in (out.get("explanations") or []):
                 if isinstance(it, dict) and "index" in it and "explanation" in it:
                     explanations_map[int(it["index"])] = str(it["explanation"]).strip()

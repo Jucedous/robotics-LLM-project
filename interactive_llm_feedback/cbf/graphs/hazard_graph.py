@@ -2,7 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Set, Tuple, List
 
-from .cbf_safety_metrics import ObjectState
+from cbf.cbf_safety_metrics import ObjectState
 
 
 @dataclass
@@ -36,9 +36,6 @@ class SceneHazardGraph:
             )
 
     def as_text_lines(self) -> List[str]:
-        """
-        Convenience helper: human-readable adjacency-style lines.
-        """
         if not self.edges:
             return [" • (no semantic hazard edges)"]
         lines: List[str] = []
@@ -53,19 +50,6 @@ def build_scene_hazard_graph_from_rules(
     objects: List[ObjectState],
     rules: List[Tuple[str, str, float, float, str, str]],
 ) -> SceneHazardGraph:
-    """
-    Build an object-level semantic hazard graph for a scene.
-
-    Args:
-        objects: list of ObjectState for the current scene.
-        rules:   list of instantiated LLM semantic rules produced by
-                 cbf.semantics_runtime.instantiate_rules, BEFORE user preferences.
-                 Each rule is (kindA, kindB, soft_clearance_m, weight, A_name, B_name).
-
-    Returns:
-        SceneHazardGraph with one node per object and undirected edges between
-        object pairs that the LLM flagged as semantically hazardous.
-    """
     graph = SceneHazardGraph()
     for o in objects:
         graph.add_node(o.name)

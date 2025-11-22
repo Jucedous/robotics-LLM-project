@@ -9,20 +9,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Button, TextBox
 
+from services.llm import LLMConfig, read_api_key
 from cbf.semantics_runtime import (
-    LLMConfig,
     analyze_scene_llm,
     instantiate_rules,
     classify_object_kind_llm,
 )
 from cbf.cbf_safety_metrics_llm import metric_hazard_pairings_cbf_objects_llm
 from cbf.cbf_safety_metrics import ObjectState, Sphere
-from cbf.tools.ui_helpers import DraggableCircle, set_arena_bounds
+from .ui_helpers import DraggableCircle, set_arena_bounds
 from cbf.preferences import PreferenceStore
 from cbf.feedback_pipeline import label_and_store_feedback
 from cbf.explanations import attach_explanations_to_hazards
-from cbf.hazard_graph import SceneHazardGraph, build_scene_hazard_graph_from_rules
-from cbf.feedback_graph import FeedbackGraph, build_feedback_graph_from_rules
+from cbf.graphs.hazard_graph import SceneHazardGraph, build_scene_hazard_graph_from_rules
+from cbf.graphs.feedback_graph import FeedbackGraph, build_feedback_graph_from_rules
 
 from .scene_io import load_scene, to_llm_payload
 from .rules import enforce_user_preferences_on_instantiated_rules
@@ -32,17 +32,7 @@ _ROOT = Path(__file__).resolve().parents[1]
 
 
 class InteractiveLLMApp:
-    """
-    Main interactive matplotlib UI.
-
-    - Left: 2D arena with draggable objects.
-    - Bottom-left: semantic hazard graph (LLM rules, no prefs).
-    - Bottom-right: user feedback graph (preference rules + similarity).
-    - Right: scrollable info panel (semantics unchanged).
-    """
-
     def __init__(self, scene_path: str):
-        # Scene + safety params
         self.objects: List[ObjectState] = load_scene(scene_path)
         self.alpha_gain: float = 5.0
         self.scale_res: float = 0.05
@@ -55,21 +45,9 @@ class InteractiveLLMApp:
         self.hazard_graph: Optional[SceneHazardGraph] = None
         self.feedback_graph: Optional[FeedbackGraph] = None
 
-        # --- LLM config / key loading ---
-        api_key = os.getenv("OPENAI_API_KEY")
-        if not api_key:
-            keyfile = _ROOT / "config" / "openai_key.txt"
-            if keyfile.exists():
-                raw = keyfile.read_text().strip()
-                if "OPENAI_API_KEY" in raw:
-                    api_key = raw.split("=", 1)[1].strip().strip('"').strip("'")
-                else:
-                    api_key = raw
-        if not api_key:
-            raise SystemExit("Missing OPENAI_API_KEY (env) or config/openai_key.txt")
+        api_key = read_api_key(None)
         self.cfg = LLMConfig(api_key=api_key)
 
-        # --- Figure & layout ---
         self.fig = plt.figure(figsize=(15.2, 9.6))
         self.fig.subplots_adjust(left=0.06, right=0.97, bottom=0.08, top=0.86)
 
@@ -80,17 +58,14 @@ class InteractiveLLMApp:
             height_ratios=[24, 1, 1, 1, 1, 1, 1],
         )
 
-        # Left main arena
         self.ax = self.fig.add_subplot(gs[0, 0])
         set_arena_bounds(self.ax, self.objects)
         self.ax.set_aspect("equal", adjustable="box")
         self.ax.set_title("Interactive LLM-Driven Safety (drag circles)")
 
-        # Right info panel (scrollable text)
         self.ax_info = self.fig.add_subplot(gs[0, 1])
         self.ax_info.axis("off")
 
-        # Right column controls
         self.ax_btn_requery = self.fig.add_subplot(gs[1, 1])
         self.ax_btn_reset = self.fig.add_subplot(gs[2, 1])
         self.ax_add_box = self.fig.add_subplot(gs[3, 1])
@@ -115,7 +90,6 @@ class InteractiveLLMApp:
         self.tb_add.on_submit(lambda _t: self.on_add_object(None))
         self.tb_rm.on_submit(lambda _t: self.on_remove_object())
 
-        # Feedback UI strip at the top
         self.user_id = getpass.getuser()
         self.store = PreferenceStore()
 
@@ -132,21 +106,17 @@ class InteractiveLLMApp:
         self.tb_feedback.on_submit(lambda _t: self.on_submit_feedback(None))
         self.btn_fb_clear.on_clicked(self.on_clear_rules)
 
-        # Draggables
         self.initial_positions: Dict[str, np.ndarray] = {
             o.name: o.sphere.center.copy() for o in self.objects
         }
         self.draggables: List[DraggableCircle] = []
 
-        # Scrollable info panel state
         self._info_lines: List[str] = []
         self._info_scroll: int = 0
         self._info_max_lines: int = 30
 
-        # Hook scroll wheel
         self.fig.canvas.mpl_connect("scroll_event", self._on_scroll_info)
 
-        # --- Graph axes (bottom area, below main arena) ---
         main_pos = self.ax.get_position()
         bottom_margin = 0.02
         gap = 0.06
@@ -155,7 +125,6 @@ class InteractiveLLMApp:
         graph_left = main_pos.x0
         graph_total_width = main_pos.width
 
-        # Two side-by-side graphs: hazard (left), feedback (right)
         hazard_width = graph_total_width * 0.48
         feedback_width = graph_total_width * 0.48
         spacing = graph_total_width * 0.04
@@ -172,13 +141,8 @@ class InteractiveLLMApp:
         self.ax_feedback_graph.set_title("User feedback graph")
         self.ax_feedback_graph.axis("off")
 
-        # Initial drawing
         self._draw_all()
         self.update_info_panel()
-
-    # ------------------------------------------------------------------
-    # LLM + semantics
-    # ------------------------------------------------------------------
 
     def _classify_all_kinds(self):
         for o in self.objects:
@@ -190,33 +154,23 @@ class InteractiveLLMApp:
                 o.kind = "object"
 
     def _rebuild_semantics(self):
-        """
-        Run LLM semantic analysis, build raw rules and graphs,
-        then apply user preferences on top.
-        """
-        # Semantic hazard relationships for this scene
         risks = analyze_scene_llm(to_llm_payload(self.objects), self.cfg)
 
-        # Raw LLM rules (no user preferences)
         rules_raw, crit_map_raw = instantiate_rules(self.objects, risks)
 
-        # Scene-level hazard graph (LLM only; ignores user prefs)
         self.hazard_graph = build_scene_hazard_graph_from_rules(
             self.objects, rules_raw
         )
 
-        # Apply user preferences on top for safety computation
         user_rules = self.store.list_rules(self.user_id)
         self.rules, self.crit_map = enforce_user_preferences_on_instantiated_rules(
             self.objects, rules_raw, crit_map_raw, user_rules
         )
 
-        # User feedback graph (based only on user_rules, plus LLM similarity)
         self.feedback_graph = build_feedback_graph_from_rules(
             user_rules, self.cfg
         )
 
-        # Optional: explanations for active rules
         if os.getenv("EXPLAIN_AUTO", "1") != "0":
             hazards_for_expl = [
                 {
@@ -261,10 +215,6 @@ class InteractiveLLMApp:
             collision_visual_only=True,
             label_semantic_entries=True,
         )
-
-    # ------------------------------------------------------------------
-    # Drawing + events
-    # ------------------------------------------------------------------
 
     def _draw_all(self):
         for d in getattr(self, "draggables", []):
@@ -375,10 +325,6 @@ class InteractiveLLMApp:
         print(f"[Feedback] cleared {n} saved rule(s) for user '{self.user_id}'.")
         self.update_info_panel()
 
-    # ------------------------------------------------------------------
-    # Scrollable info panel
-    # ------------------------------------------------------------------
-
     def update_info_panel(self):
         scene_in_sync = self.scene_version == self.rules_version
         if scene_in_sync:
@@ -395,7 +341,6 @@ class InteractiveLLMApp:
                 "safety_score_0_to_5": 5.0,
             }
 
-        # Title on main arena
         score = float(out.get("safety_score_0_to_5", 0.0))
         crit = bool(out.get("critical_violation", False))
         title = f"Safety Score: {score:.2f} / 5.00"
@@ -405,15 +350,12 @@ class InteractiveLLMApp:
             title += "  —  (scene changed; press Requery LLM)"
         self.ax.set_title(title)
 
-        # Keep object labels attached to circles
         for d in self.draggables:
             cx, cy = d.artist.center
             d.label.set_position((cx, cy))
 
-        # ------------ build info text as list of lines ------------
         info_lines: List[str] = []
 
-        # Rules (LLM + prefs) — semantics same as your existing panel
         info_lines.append("Rules (LLM + prefs):")
         if scene_in_sync:
             if not getattr(self, "rules", []):
@@ -430,7 +372,6 @@ class InteractiveLLMApp:
         else:
             info_lines.append(" • (stale; press Requery LLM)")
 
-        # Metrics breakdown
         metrics = out.get("metrics", [])
         hazards = [m for m in metrics if m.get("channel") == "semantic"]
         collisions = [
@@ -462,7 +403,6 @@ class InteractiveLLMApp:
             for m in visual:
                 info_lines.append(f" • {m['name']}: risk={m['risk']:.3g}")
 
-        # Semantic hazard graph summary (text only)
         info_lines.append("")
         info_lines.append("Semantic hazard graph (objects):")
         if self.hazard_graph is None:
@@ -476,28 +416,21 @@ class InteractiveLLMApp:
                     f"w={edge.weight:.2f})-- {edge.obj_b}"
                 )
 
-        # We intentionally do NOT dump the feedback graph text here,
-        # so the panel meaning stays focused on hazards/metrics.
-
-        # Summary
         residual_min = float(out.get("residual_min", float("inf")))
         composite_risk = float(out.get("composite_risk", 0.0))
         info_lines.append("")
         info_lines.append(f"residual_min: {residual_min:.3f}")
         info_lines.append(f"composite_risk: {composite_risk:.3g}")
 
-        # Store lines & clamp scroll
         self._info_lines = info_lines
         max_start = max(len(self._info_lines) - self._info_max_lines, 0)
         self._info_scroll = max(0, min(self._info_scroll, max_start))
 
-        # Draw info text + both graphs
         self._render_info_panel()
         self._draw_hazard_graph()
         self._draw_feedback_graph()
 
     def _on_scroll_info(self, event):
-        """Mouse wheel handler for scrolling the info panel."""
         if event.inaxes is not self.ax_info:
             return
         if not self._info_lines:
@@ -505,7 +438,7 @@ class InteractiveLLMApp:
 
         n_lines = len(self._info_lines)
         max_start = max(n_lines - self._info_max_lines, 0)
-        step = 3  # lines per scroll notch
+        step = 3
 
         if event.button == "up":
             self._info_scroll = max(self._info_scroll - step, 0)
@@ -517,7 +450,6 @@ class InteractiveLLMApp:
         self._render_info_panel()
 
     def _render_info_panel(self):
-        """Render the current slice of info lines into ax_info."""
         self.ax_info.clear()
         self.ax_info.axis("off")
 
@@ -560,12 +492,7 @@ class InteractiveLLMApp:
 
         self.fig.canvas.draw_idle()
 
-    # ------------------------------------------------------------------
-    # Graph drawing helpers
-    # ------------------------------------------------------------------
-
     def _draw_hazard_graph(self):
-        """Draw the semantic hazard graph (LLM-only) in ax_graph."""
         self.ax_graph.clear()
         self.ax_graph.set_title("Semantic hazard graph")
         self.ax_graph.axis("off")
@@ -607,7 +534,6 @@ class InteractiveLLMApp:
         else:
             def norm(_w): return 0.5
 
-        # Edges: grey, width scaled by weight
         for (a, b), edge in hg.edges.items():
             if a not in positions or b not in positions:
                 continue
@@ -624,7 +550,6 @@ class InteractiveLLMApp:
                 zorder=1,
             )
 
-        # Nodes + labels slightly outside
         for node, (x, y) in positions.items():
             self.ax_graph.scatter(
                 [x],
@@ -654,14 +579,6 @@ class InteractiveLLMApp:
         self.fig.canvas.draw_idle()
 
     def _draw_feedback_graph(self):
-        """
-        Draw the user feedback rule graph in ax_feedback_graph.
-
-        Edge styles:
-        - dangerous: solid, thicker line
-        - not_dangerous: solid, thin line
-        - similar: dashed, very thin line
-        """
         self.ax_feedback_graph.clear()
         self.ax_feedback_graph.set_title("User feedback graph")
         self.ax_feedback_graph.axis("off")
@@ -693,7 +610,6 @@ class InteractiveLLMApp:
             for node, a in zip(nodes, angles)
         }
 
-        # Draw edges with styles by kind
         for (a, b), edge in fg.edges.items():
             if a not in positions or b not in positions:
                 continue
@@ -728,7 +644,6 @@ class InteractiveLLMApp:
                 zorder=1,
             )
 
-            # Label the edge at midpoint with concise info
             mx, my = (x0 + x1) / 2.0, (y0 + y1) / 2.0
             labels: List[str] = []
             if "dangerous" in kinds:
@@ -753,7 +668,6 @@ class InteractiveLLMApp:
                     alpha=0.8,
                 )
 
-        # Draw nodes + labels slightly outside
         for node, (x, y) in positions.items():
             self.ax_feedback_graph.scatter(
                 [x],

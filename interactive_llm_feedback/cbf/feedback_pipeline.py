@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import requests
 from pathlib import Path
 from cbf.preferences import PreferenceStore
+from services.llm import post_chat_json_system_user, norm_base_v1 as _norm_base_v1, compose_completions_url as _compose_completions_url, read_api_key
 
 def _cfg_field(cfg: Any, name: str, default=None):
     if cfg is None:
@@ -14,25 +15,6 @@ def _cfg_field(cfg: Any, name: str, default=None):
 
 def _project_root() -> Path:
     return Path(__file__).resolve().parents[1]
-
-def _read_api_key_from_disk() -> Optional[str]:
-    for env in ("OPENAI_API_KEY", "OPENAI_APIKEY", "OPENAI_TOKEN"):
-        v = os.environ.get(env)
-        if v:
-            return v.strip()
-    candidates = [
-        _project_root() / "config" / "openai_key.txt",
-        _project_root() / "cbf_extracted" / "config" / "openai_key.txt",
-    ]
-    for p in candidates:
-        try:
-            if p.exists():
-                t = p.read_text(encoding="utf-8").strip()
-                if t:
-                    return t
-        except Exception:
-            pass
-    return None
 
 def _objects_summary(objects: List[Any]) -> List[Dict[str, str]]:
     out: List[Dict[str, str]] = []
@@ -105,43 +87,6 @@ def _extract_json_block(text: str) -> Dict[str, Any]:
         except Exception as e:
             last_err = e
     raise ValueError(f"Could not parse JSON from model output. Last error: {last_err}")
-
-def _norm_base_v1(base: Optional[str]) -> Optional[str]:
-    if not base:
-        return None
-    b = base.strip().rstrip("/")
-    b = re.sub(r"/chat/completions/?$", "", b)
-    b = re.sub(r"/completions/?$", "", b)
-    if not re.search(r"/v\d+($|/)", b):
-        b += "/v1"
-    return b.rstrip("/")
-
-def _compose_completions_url(base: Optional[str]) -> str:
-    base = _norm_base_v1(base) or "https://api.openai.com/v1"
-    return base + "/completions"
-
-def _post_openai_chat_json(cfg: Any, system_prompt: str, user_prompt: str) -> Dict[str, Any]:
-    api_key = _cfg_field(cfg, "api_key") or _read_api_key_from_disk()
-    if not api_key:
-        raise RuntimeError("Missing OpenAI API key.")
-    api_url = _cfg_field(cfg, "api_url", "https://api.openai.com/v1/chat/completions")
-    model   = _cfg_field(cfg, "model", "gpt-4o-mini")
-    temperature = float(_cfg_field(cfg, "temperature", 0.0))
-    timeout_s   = int(_cfg_field(cfg, "timeout_s", 60))
-    headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
-    body = {
-        "model": model,
-        "temperature": temperature,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user",   "content": user_prompt},
-        ],
-    }
-    r = requests.post(api_url, headers=headers, json=body, timeout=timeout_s)
-    r.raise_for_status()
-    content = r.json()["choices"][0]["message"]["content"]
-    return json.loads(content)
 
 _CHAT_SYSTEM = (
     "You convert user preferences into a single JSON object with keys:\n"
@@ -216,7 +161,7 @@ def label_and_store_feedback(
                 feedback=text.strip(),
                 objects=json.dumps(objects_ctx, ensure_ascii=False, indent=2),
             )
-            data_json = _post_openai_chat_json(cfg, _CHAT_SYSTEM, user_prompt)
+            data_json = post_chat_json_system_user(cfg, _CHAT_SYSTEM, user_prompt)
         except Exception as e_chat:
             try:
                 base = (
@@ -227,7 +172,7 @@ def label_and_store_feedback(
                     or _cfg_field(cfg, "base_url")
                 )
                 url = _compose_completions_url(base)
-                api_key = _cfg_field(cfg, "api_key") or _read_api_key_from_disk()
+                api_key = read_api_key(cfg)
                 if not api_key:
                     raise RuntimeError("Missing OpenAI API key.")
                 headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}

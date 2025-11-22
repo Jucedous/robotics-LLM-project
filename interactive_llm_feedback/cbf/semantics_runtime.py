@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Callable
 import json, math, re
+from services.llm import LLMConfig, post_chat_json_messages
 
 _ALLOWED_FUNCS: Dict[str, Callable[..., Any]] = {
     "abs": abs,
@@ -113,28 +114,6 @@ class SafeExpr:
         return eval_node(self._ast)
 
 @dataclass
-class LLMConfig:
-    api_key: str
-    model: str = "gpt-4o-mini"
-    api_url: str = "https://api.openai.com/v1/chat/completions"
-    temperature: float = 0.0
-    timeout_s: int = 60
-
-def _post_openai(cfg: LLMConfig, messages: List[Dict[str, str]]) -> Dict[str, Any]:
-    import requests
-    headers = {"Authorization": f"Bearer {cfg.api_key}", "Content-Type": "application/json"}
-    body = {
-        "model": cfg.model,
-        "temperature": cfg.temperature,
-        "response_format": {"type": "json_object"},
-        "messages": messages,
-    }
-    r = requests.post(cfg.api_url, headers=headers, json=body, timeout=cfg.timeout_s)
-    r.raise_for_status()
-    content = r.json()["choices"][0]["message"]["content"]
-    return json.loads(content)
-
-@dataclass
 class CompiledRisk:
     sel_a: Tuple[str, str]
     sel_b: Tuple[str, str]
@@ -144,17 +123,12 @@ class CompiledRisk:
     critical_fn: Optional[Callable[[Any, Any], bool]]
 
 def _inline_params_in_expr(expr: str, param_values: Dict[str, float]) -> str:
-    """Replace param identifiers in expression with numeric literals."""
     out = expr
     for name, val in param_values.items():
         out = re.sub(rf"\b{re.escape(name)}\b", str(float(val)), out)
     return out
 
 def _pair_features(scene_objs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """
-    Build all unordered pairs with basic geometry features computed client-side.
-    Expected per object: {name, kind, xyz, r}
-    """
     feats: List[Dict[str, Any]] = []
     n = len(scene_objs)
     for i in range(n):
@@ -247,7 +221,7 @@ CONSTRAINTS:
             pair_json=json.dumps(pairs, indent=2),
         )},
     ]
-    data = _post_openai(cfg, messages)
+    data = post_chat_json_messages(cfg, messages)
 
     assessments = data.get("assessments", [])
     if not isinstance(assessments, list) or len(assessments) != pair_count:
@@ -329,7 +303,7 @@ def classify_object_kind_llm(name: str, tags: List[str], cfg: LLMConfig) -> str:
             {"role": "system", "content": sys_prompt},
             {"role": "user", "content": json.dumps(user_payload, ensure_ascii=False)},
         ]
-        data = _post_openai(cfg, messages)
+        data = post_chat_json_messages(cfg, messages)
         k = str(data.get("kind", "")).strip().lower()
         if 1 <= len(k) <= 64:
             return k

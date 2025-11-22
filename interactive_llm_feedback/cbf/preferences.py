@@ -7,10 +7,10 @@ def _root_dir() -> Path:
     return Path(__file__).resolve().parent.parent
 
 def _default_path() -> Path:
-    return (_root_dir() / "config" / "user_prefs.json").resolve()
+    return (_root_dir() / "models" / "user_prefs.json").resolve()
 
 def _profile_path(profile: str) -> Path:
-    return (_root_dir() / "config" / f"user_prefs_{profile}.json").resolve()
+    return (_root_dir() / "models" / f"user_prefs_{profile}.json").resolve()
 
 class PreferenceStore:
     def __init__(self, path: Optional[Path] = None):
